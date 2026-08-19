@@ -100,6 +100,12 @@ export const IconSearch = (p: P) => (
   </svg>
 );
 
+export const IconFilter = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M22 4H2l8 9.5V20l4 2v-8.5L22 4z" />
+  </svg>
+);
+
 export const IconCalendar = (p: P) => (
   <svg {...base} {...p}>
     <rect x="3" y="5" width="18" height="16" rx="2" />

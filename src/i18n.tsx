@@ -374,6 +374,18 @@ const en: Record<string, string> = {
   "act.noOne": "No individual activity in this period.",
   "act.entry_one": "{n} entry",
   "act.entry_many": "{n} entries",
+  "act.cats": "Show",
+  "act.catAll": "Everything",
+  "act.taskDone": "Completed tasks",
+  "act.taskAssigned": "Assigned tasks",
+  "act.team": "Team",
+  "act.allTeams": "All teams",
+  "act.person": "Person",
+  "act.everyone": "Everyone",
+  "act.filteredEmpty": "Nothing matches these filters.",
+  "act.filteredBody": "Loosen the category, team or person filters to see more of this period.",
+  "act.clear": "Clear filters",
+  "act.active": "filters active",
 };
 
 const fr: Record<string, string> = {
@@ -748,6 +760,18 @@ const fr: Record<string, string> = {
   "act.noOne": "Aucune activité individuelle sur cette période.",
   "act.entry_one": "{n} entrée",
   "act.entry_many": "{n} entrées",
+  "act.cats": "Afficher",
+  "act.catAll": "Tout",
+  "act.taskDone": "Tâches terminées",
+  "act.taskAssigned": "Tâches affectées",
+  "act.team": "Équipe",
+  "act.allTeams": "Toutes les équipes",
+  "act.person": "Personne",
+  "act.everyone": "Tout le monde",
+  "act.filteredEmpty": "Rien ne correspond à ces filtres.",
+  "act.filteredBody": "Assouplissez les filtres de catégorie, d’équipe ou de personne pour élargir la période.",
+  "act.clear": "Effacer les filtres",
+  "act.active": "filtres actifs",
 };
 
 const MESSAGES: Record<Lang, Record<string, string>> = { en, fr };

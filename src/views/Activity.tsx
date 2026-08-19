@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { EventKind, PersonEvent, Task } from "../types";
-import { useStore } from "../store";
+import { involvedIds, useStore } from "../store";
 import { KIND_META, TEAM_COLORS } from "../meta";
 import {
   addDays,
@@ -25,8 +25,10 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconFilter,
   IconListChecks,
   IconStar,
+  IconX,
 } from "../icons";
 import { useI18n } from "../i18n";
 
@@ -39,6 +41,19 @@ interface DayEntry {
 
 const RANGE_KINDS: EventKind[] = ["absence", "sick", "leave"];
 
+type Cat = "taskDone" | "taskAssigned" | EventKind;
+
+const CAT_DEFS: { key: Cat; dot: string }[] = [
+  { key: "taskDone", dot: "bg-mint" },
+  { key: "taskAssigned", dot: "bg-sky" },
+  { key: "commendation", dot: "bg-amber" },
+  { key: "misconduct", dot: "bg-coral" },
+  { key: "absence", dot: "bg-rose" },
+  { key: "sick", dot: "bg-cyan" },
+  { key: "leave", dot: "bg-sky" },
+  { key: "observation", dot: "bg-sage" },
+];
+
 export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void }) {
   const { state } = useStore();
   const { t, tp } = useI18n();
@@ -46,6 +61,33 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
 
   const [period, setPeriod] = useState<Period>("week");
   const [cursor, setCursor] = useState(today);
+
+  /* -------- filters -------- */
+  const [cats, setCats] = useState<Cat[]>([]);
+  const [personId, setPersonId] = useState("");
+  const [teamId, setTeamId] = useState("");
+
+  const hasFilters = cats.length > 0 || personId !== "" || teamId !== "";
+  const catActive = (c: Cat) => cats.length === 0 || cats.includes(c);
+  const teamMembers = useMemo(
+    () => (teamId !== "" ? state.teams.find((tm) => tm.id === teamId)?.memberIds ?? [] : null),
+    [state.teams, teamId]
+  );
+  const personMatch = (pid: string) =>
+    personId !== "" ? pid === personId : teamMembers ? teamMembers.includes(pid) : true;
+  const taskMatch = (x: Task) =>
+    personId === "" && teamId === "" ? true : involvedIds(state, x).some(personMatch);
+  const clearFilters = () => {
+    setCats([]);
+    setPersonId("");
+    setTeamId("");
+  };
+  const catLabel = (c: Cat) =>
+    c === "taskDone"
+      ? t("act.taskDone")
+      : c === "taskAssigned"
+      ? t("act.taskAssigned")
+      : t(KIND_META[c].key);
 
   const start = period === "week" ? startOfWeekISO(cursor) : monthStartISO(cursor);
   const end = period === "week" ? addDays(startOfWeekISO(cursor), 6) : monthEndISO(cursor);
@@ -58,19 +100,28 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
       ? `${t("cal.weekN", { n: weekNumber(start) })} · ${fmtDate(start)} – ${fmtDate(end)}`
       : monthTitle(start);
 
-  /* -------- aggregate stats -------- */
+  /* -------- aggregate stats (filters applied here cascade everywhere) -------- */
   const agg = useMemo(() => {
-    const evs = state.events.filter((e) => e.date <= end && (e.endDate ?? e.date) >= start);
+    const evs = state.events
+      .filter((e) => e.date <= end && (e.endDate ?? e.date) >= start)
+      .filter((e) => {
+        if (!personMatch(e.personId)) return false;
+        if (e.kind === "task") return catActive("taskDone") || catActive("taskAssigned");
+        return catActive(e.kind);
+      });
     const count = (k: EventKind) => evs.filter((e) => e.kind === k).length;
     const daysFor = (k: EventKind) =>
       evs.filter((e) => e.kind === k).reduce((n, e) => n + overlapDays(e.date, e.endDate, start, end), 0);
     const completed = state.tasks
       .filter((x) => x.completedAt && x.completedAt >= start && x.completedAt <= end)
+      .filter((x) => catActive("taskDone") && taskMatch(x))
       .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
-    const assigned = state.tasks.filter((x) => {
-      const d = toISO(new Date(x.createdAt));
-      return d >= start && d <= end;
-    });
+    const assigned = state.tasks
+      .filter((x) => {
+        const d = toISO(new Date(x.createdAt));
+        return d >= start && d <= end;
+      })
+      .filter((x) => catActive("taskAssigned") && taskMatch(x));
     return {
       evs,
       total: evs.length,
@@ -84,7 +135,8 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
       observations: count("observation"),
       taskEvents: count("task"),
     };
-  }, [state, start, end]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, start, end, cats, personId, teamId]);
 
   /* -------- day by day -------- */
   const days = useMemo(() => {
@@ -276,12 +328,135 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
         {periodLabel}
       </p>
 
+      {/* -------- filter bar -------- */}
+      <section
+        className={`${panelCls} reveal px-4 sm:px-5 py-3.5 space-y-3`}
+        style={{ animationDelay: "70ms" }}
+      >
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-mut mr-1.5">
+            <IconFilter className="w-3.5 h-3.5" /> {t("act.cats")}
+          </span>
+          <button
+            onClick={() => setCats([])}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+              cats.length === 0
+                ? "bg-panel2 border-line2 text-ink"
+                : "border-line text-mut hover:text-ink hover:border-line2"
+            }`}
+          >
+            {t("act.catAll")}
+          </button>
+          {CAT_DEFS.map((c) => {
+            const on = cats.includes(c.key);
+            return (
+              <button
+                key={c.key}
+                onClick={() =>
+                  setCats((prev) => (on ? prev.filter((x) => x !== c.key) : [...prev, c.key]))
+                }
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                  on ? "bg-panel2 border-line2 text-ink" : "border-line text-mut hover:text-ink hover:border-line2"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${on ? "" : "opacity-40"}`} />
+                {catLabel(c.key)}
+              </button>
+            );
+          })}
+          {hasFilters && (
+            <button
+              onClick={clearFilters}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-mint/40 bg-mint/10 text-mint px-3 py-1.5 text-xs font-semibold hover:bg-mint/20 transition-all duration-150"
+            >
+              <IconX className="w-3 h-3" /> {t("act.clear")}
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`transition-opacity duration-200 ${personId !== "" ? "opacity-40 pointer-events-none" : ""} inline-flex items-center gap-1.5 flex-wrap`}>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut mr-1.5">
+              {t("act.team")}
+            </span>
+            <button
+              onClick={() => setTeamId("")}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                teamId === ""
+                  ? "bg-panel2 border-line2 text-ink"
+                  : "border-line text-mut hover:text-ink hover:border-line2"
+              }`}
+            >
+              {t("act.allTeams")}
+            </button>
+            {state.teams.map((tm) => {
+              const on = teamId === tm.id;
+              const c = TEAM_COLORS[tm.color];
+              return (
+                <button
+                  key={tm.id}
+                  onClick={() => setTeamId(on ? "" : tm.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                    on ? c.chip : "border-line text-mut hover:text-ink hover:border-line2"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${on ? "" : "opacity-40"}`} />
+                  {tm.name}
+                </button>
+              );
+            })}
+          </span>
+
+          <span className="w-px h-5 bg-line mx-1.5 hidden sm:block" aria-hidden />
+
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut mr-1.5">
+            {t("act.person")}
+          </span>
+          <button
+            onClick={() => setPersonId("")}
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+              personId === ""
+                ? "bg-panel2 border-line2 text-ink"
+                : "border-line text-mut hover:text-ink hover:border-line2"
+            }`}
+          >
+            {t("act.everyone")}
+          </button>
+          <span className="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5">
+            {state.people.map((p) => {
+              const on = personId === p.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPersonId(on ? "" : p.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border pl-1 pr-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all duration-150 ${
+                    on
+                      ? "border-mint/50 bg-mint/10 text-ink"
+                      : "border-line text-mut hover:border-line2 hover:text-ink"
+                  }`}
+                >
+                  <Avatar name={p.name} hue={p.hue} size={20} />
+                  {p.name.split(" ")[0]}
+                </button>
+              );
+            })}
+          </span>
+        </div>
+      </section>
+
       {isEmpty ? (
         <div className={panelCls}>
           <EmptyState
-            icon={<IconActivity className="w-5 h-5" />}
-            title={t("act.emptyTitle")}
-            body={t("act.emptyBody")}
+            icon={hasFilters ? <IconFilter className="w-5 h-5" /> : <IconActivity className="w-5 h-5" />}
+            title={hasFilters ? t("act.filteredEmpty") : t("act.emptyTitle")}
+            body={hasFilters ? t("act.filteredBody") : t("act.emptyBody")}
+            action={
+              hasFilters ? (
+                <button className={btnGhost} onClick={clearFilters}>
+                  <IconX className="w-4 h-4" /> {t("act.clear")}
+                </button>
+              ) : undefined
+            }
           />
         </div>
       ) : (
@@ -333,7 +508,14 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
           <div className="grid lg:grid-cols-3 gap-4 items-start">
             {/* day by day */}
             <section className={`${panelCls} lg:col-span-2 reveal`} style={{ animationDelay: "170ms" }}>
-              <h2 className="font-display font-semibold text-lg px-4 sm:px-5 pt-4 pb-2">{t("act.dayByDay")}</h2>
+              <div className="flex items-center justify-between px-4 sm:px-5 pt-4 pb-2">
+                <h2 className="font-display font-semibold text-lg">{t("act.dayByDay")}</h2>
+                {hasFilters && (
+                  <Chip className="text-mint bg-mint/10 border-mint/30">
+                    <IconFilter className="w-3 h-3" /> {t("act.active")}
+                  </Chip>
+                )}
+              </div>
               <div className="px-3 sm:px-4 pb-4 max-h-[640px] overflow-y-auto">
                 {days.map(([day, d]) => {
                   const n = d.events.length + d.done.length + d.assigned.length;
