@@ -1,74 +1,71 @@
 import { useEffect, useState } from "react";
 import type { EventKind, Person, Task, TaskStatus, Team, TeamColor } from "./types";
-import { makeEvent, useStore } from "./store";
+import { involvedIds, makeEvent, useStore } from "./store";
 import { uid } from "./data";
-import { addDays, todayISO } from "./dates";
-import { KIND_META, KIND_ORDER, TEAM_COLORS, TEAM_COLOR_KEYS } from "./meta";
-import { Avatar, Chip, Field, Modal, Select, TextArea, TextInput, btnGhost, btnPrimary, useToast } from "./ui";
+import { todayISO } from "./dates";
+import { KIND_META, KIND_ORDER, TASK_STATUS_KEY, TEAM_COLORS, TEAM_COLOR_KEYS } from "./meta";
+import { Field, Modal, Select, TextArea, TextInput, btnGhost, btnPrimary, useToast } from "./ui";
+import { useI18n } from "./i18n";
+import { Avatar, Chip } from "./ui";
 import { IconCheck, IconSearch } from "./icons";
 
-const RANGE_KINDS: EventKind[] = ["absence", "sick", "leave"];
+const HUES = [16, 40, 70, 96, 130, 158, 188, 210, 232, 258, 288, 316, 340];
 
 /* ================= Person ================= */
 
 export function PersonModal({
   open,
-  onClose,
   person,
+  onClose,
 }: {
   open: boolean;
-  onClose: () => void;
   person: Person | null;
+  onClose: () => void;
 }) {
   const { state, dispatch } = useStore();
+  const { t } = useI18n();
   const { push } = useToast();
-  const [form, setForm] = useState({ name: "", role: "", email: "", phone: "", joinedAt: todayISO(), teamIds: [] as string[] });
+
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [joined, setJoined] = useState(todayISO());
+  const [teamIds, setTeamIds] = useState<string[]>([]);
   const [err, setErr] = useState("");
 
   useEffect(() => {
     if (!open) return;
+    setName(person?.name ?? "");
+    setRole(person?.role ?? "");
+    setEmail(person?.email ?? "");
+    setPhone(person?.phone ?? "");
+    setJoined(person?.joinedAt ?? todayISO());
+    setTeamIds(person ? state.teams.filter((tm) => tm.memberIds.includes(person.id)).map((tm) => tm.id) : []);
     setErr("");
-    setForm(
-      person
-        ? {
-            name: person.name,
-            role: person.role,
-            email: person.email,
-            phone: person.phone,
-            joinedAt: person.joinedAt,
-            teamIds: state.teams.filter((t) => t.memberIds.includes(person.id)).map((t) => t.id),
-          }
-        : { name: "", role: "", email: "", phone: "", joinedAt: todayISO(), teamIds: [] }
-    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, person]);
 
-  const toggleTeam = (id: string) =>
-    setForm((f) => ({
-      ...f,
-      teamIds: f.teamIds.includes(id) ? f.teamIds.filter((x) => x !== id) : [...f.teamIds, id],
-    }));
-
-  const save = () => {
-    if (!form.name.trim()) {
-      setErr("A name is required for the roster.");
-      return;
-    }
-    const p: Person = {
-      id: person?.id ?? uid(),
-      name: form.name.trim(),
-      role: form.role.trim() || "Staff",
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      joinedAt: form.joinedAt || todayISO(),
-      hue: person?.hue ?? Math.floor(Math.random() * 360),
+  const submit = () => {
+    if (!name.trim()) return setErr(t("mp.nameRequired"));
+    const clean = {
+      name: name.trim(),
+      role: role.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      joinedAt: joined || todayISO(),
     };
     if (person) {
-      dispatch({ type: "UPDATE_PERSON", person: p, teamIds: form.teamIds });
-      push(`${p.name}'s details updated`);
+      dispatch({ type: "UPDATE_PERSON", person: { ...person, ...clean }, teamIds });
+      push(t("mp.updated"));
     } else {
-      dispatch({ type: "ADD_PERSON", person: p, teamIds: form.teamIds });
-      push(`${p.name} added to the roster`);
+      const p: Person = {
+        id: uid(),
+        ...clean,
+        hue: HUES[Math.floor(Math.random() * HUES.length)],
+      };
+      dispatch({ type: "ADD_PERSON", person: p, teamIds });
+      push(t("mp.added", { name: p.name }));
     }
     onClose();
   };
@@ -77,87 +74,63 @@ export function PersonModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={person ? "Edit subordinate" : "New subordinate"}
-      subtitle={person ? person.name : "Add someone to your roster"}
+      title={person ? t("mp.editTitle") : t("mp.title")}
       footer={
         <>
-          <button className={btnGhost} onClick={onClose}>
-            Cancel
-          </button>
-          <button className={btnPrimary} onClick={save}>
-            <IconCheck className="w-4 h-4" /> {person ? "Save changes" : "Add to roster"}
+          <button className={btnGhost} onClick={onClose}>{t("common.cancel")}</button>
+          <button className={btnPrimary} onClick={submit}>
+            {person ? t("common.save") : t("common.create")}
           </button>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label="Full name" error={err}>
-          <TextInput
-            autoFocus
-            placeholder="e.g. Nadia Osman"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
+        <Field label={t("mp.name")} error={err}>
+          <TextInput autoFocus value={name} placeholder={t("mp.namePh")} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Role / title">
-            <TextInput
-              placeholder="e.g. Records Clerk"
-              value={form.role}
-              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-            />
+        <Field label={t("mp.role")}>
+          <TextInput value={role} placeholder={t("mp.rolePh")} onChange={(e) => setRole(e.target.value)} />
+        </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label={t("mp.email")}>
+            <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>
-          <Field label="Joined on">
-            <TextInput
-              type="date"
-              value={form.joinedAt}
-              onChange={(e) => setForm((f) => ({ ...f, joinedAt: e.target.value }))}
-            />
+          <Field label={t("mp.phone")}>
+            <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Email">
-            <TextInput
-              type="email"
-              placeholder="name@office.co"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            />
-          </Field>
-          <Field label="Phone">
-            <TextInput
-              placeholder="+00 …"
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-            />
-          </Field>
-        </div>
-        <Field label="Team membership">
+        <Field label={t("mp.joined")}>
+          <TextInput type="date" value={joined} onChange={(e) => setJoined(e.target.value)} />
+        </Field>
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mut mb-1.5">
+            {t("mp.teams")}
+          </p>
           {state.teams.length === 0 ? (
-            <p className="text-sm text-dim">No teams yet — create one in the Teams section.</p>
+            <p className="text-xs text-dim">{t("mp.noTeams")}</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {state.teams.map((t) => {
-                const on = form.teamIds.includes(t.id);
-                const c = TEAM_COLORS[t.color];
+            <div className="flex flex-wrap gap-1.5">
+              {state.teams.map((tm) => {
+                const on = teamIds.includes(tm.id);
+                const c = TEAM_COLORS[tm.color];
                 return (
                   <button
-                    key={t.id}
+                    key={tm.id}
                     type="button"
-                    onClick={() => toggleTeam(t.id)}
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
-                      on ? c.chip : "border-line2 text-mut hover:text-ink hover:bg-panel2"
+                    onClick={() => setTeamIds((ids) => (on ? ids.filter((x) => x !== tm.id) : [...ids, tm.id]))}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                      on ? c.chip : "border-line text-mut hover:border-line2 hover:text-ink"
                     }`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-                    {t.name}
+                    <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${on ? "" : "opacity-40"}`} />
+                    {tm.name}
                     {on && <IconCheck className="w-3 h-3" />}
                   </button>
                 );
               })}
             </div>
           )}
-        </Field>
+        </div>
       </div>
     </Modal>
   );
@@ -167,48 +140,41 @@ export function PersonModal({
 
 export function TeamModal({
   open,
-  onClose,
   team,
+  onClose,
 }: {
   open: boolean;
-  onClose: () => void;
   team: Team | null;
+  onClose: () => void;
 }) {
   const { dispatch } = useStore();
+  const { t } = useI18n();
   const { push } = useToast();
-  const [form, setForm] = useState({ name: "", purpose: "", color: "mint" as TeamColor });
+
+  const [name, setName] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [color, setColor] = useState<TeamColor>("mint");
   const [err, setErr] = useState("");
 
   useEffect(() => {
     if (!open) return;
+    setName(team?.name ?? "");
+    setPurpose(team?.purpose ?? "");
+    setColor(team?.color ?? "mint");
     setErr("");
-    setForm(team ? { name: team.name, purpose: team.purpose, color: team.color } : { name: "", purpose: "", color: "mint" });
   }, [open, team]);
 
-  const save = () => {
-    if (!form.name.trim()) {
-      setErr("Give the team a name.");
-      return;
-    }
+  const submit = () => {
+    if (!name.trim()) return setErr(t("mt.nameRequired"));
     if (team) {
-      dispatch({
-        type: "UPDATE_TEAM",
-        team: { ...team, name: form.name.trim(), purpose: form.purpose.trim(), color: form.color },
-      });
-      push(`Team "${form.name.trim()}" updated`);
+      dispatch({ type: "UPDATE_TEAM", team: { ...team, name: name.trim(), purpose: purpose.trim(), color } });
+      push(t("mt.updated"));
     } else {
       dispatch({
         type: "ADD_TEAM",
-        team: {
-          id: uid(),
-          name: form.name.trim(),
-          purpose: form.purpose.trim(),
-          color: form.color,
-          memberIds: [],
-          createdAt: new Date().toISOString(),
-        },
+        team: { id: uid(), name: name.trim(), purpose: purpose.trim(), color, memberIds: [], createdAt: new Date().toISOString() },
       });
-      push(`Team "${form.name.trim()}" created`);
+      push(t("mt.created", { name: name.trim() }));
     }
     onClose();
   };
@@ -217,149 +183,126 @@ export function TeamModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={team ? "Edit team" : "New team"}
-      subtitle={team ? team.name : "A named crew you can assign tasks to"}
+      title={team ? t("mt.editTitle") : t("mt.title")}
       footer={
         <>
-          <button className={btnGhost} onClick={onClose}>
-            Cancel
-          </button>
-          <button className={btnPrimary} onClick={save}>
-            <IconCheck className="w-4 h-4" /> {team ? "Save changes" : "Create team"}
+          <button className={btnGhost} onClick={onClose}>{t("common.cancel")}</button>
+          <button className={btnPrimary} onClick={submit}>
+            {team ? t("common.save") : t("common.create")}
           </button>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label="Team name" error={err}>
-          <TextInput
-            autoFocus
-            placeholder="e.g. Night Shift"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
+        <Field label={t("mt.name")} error={err}>
+          <TextInput autoFocus value={name} placeholder={t("mt.namePh")} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="Purpose">
-          <TextInput
-            placeholder="What is this team responsible for?"
-            value={form.purpose}
-            onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}
-          />
+        <Field label={t("mt.purpose")}>
+          <TextArea rows={2} value={purpose} placeholder={t("mt.purposePh")} onChange={(e) => setPurpose(e.target.value)} />
         </Field>
-        <Field label="Colour tag">
-          <div className="flex gap-2.5">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mut mb-1.5">{t("mt.color")}</p>
+          <div className="flex flex-wrap gap-2">
             {TEAM_COLOR_KEYS.map((c) => (
               <button
                 key={c}
                 type="button"
-                title={TEAM_COLORS[c].label}
-                onClick={() => setForm((f) => ({ ...f, color: c }))}
+                title={t(TEAM_COLORS[c].key)}
+                onClick={() => setColor(c)}
                 className={`w-8 h-8 rounded-full ${TEAM_COLORS[c].swatch} transition-all duration-150 ${
-                  form.color === c
-                    ? "ring-2 ring-offset-2 ring-offset-panel ring-ink/70 scale-110"
-                    : "opacity-55 hover:opacity-90"
+                  color === c ? "ring-2 ring-offset-2 ring-offset-panel ring-ink scale-110" : "opacity-70 hover:opacity-100"
                 }`}
               />
             ))}
           </div>
-        </Field>
+        </div>
       </div>
     </Modal>
   );
 }
 
-/* ================= Team members ================= */
+/* ================= Members ================= */
 
 export function MembersModal({
   open,
-  onClose,
   team,
+  onClose,
 }: {
   open: boolean;
-  onClose: () => void;
   team: Team | null;
+  onClose: () => void;
 }) {
   const { state, dispatch } = useStore();
-  const { push } = useToast();
-  const [selected, setSelected] = useState<string[]>([]);
+  const { t, tp } = useI18n();
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    if (!open || !team) return;
-    setSelected(team.memberIds);
-    setQuery("");
+    if (open) setQuery("");
   }, [open, team]);
 
-  if (!team) return null;
+  if (!team) return <Modal open={false} onClose={onClose} title="">{null}</Modal>;
 
-  const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  const selected = state.teams.find((x) => x.id === team.id)?.memberIds ?? [];
 
-  const list = state.people.filter((p) =>
-    (p.name + " " + p.role).toLowerCase().includes(query.toLowerCase())
-  );
-
-  const save = () => {
-    dispatch({ type: "SET_TEAM_MEMBERS", teamId: team.id, memberIds: selected });
-    push(`${team.name}: ${selected.length} member${selected.length === 1 ? "" : "s"} assigned`);
-    onClose();
+  const toggle = (id: string) => {
+    const next = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
+    dispatch({ type: "SET_TEAM_MEMBERS", teamId: team.id, memberIds: next });
   };
+
+  const people = state.people.filter((p) =>
+    (p.name + " " + p.role).toLowerCase().includes(query.trim().toLowerCase())
+  );
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={`Members of ${team.name}`}
-      subtitle="Tick who belongs to this team"
+      title={t("mm.title")}
+      subtitle={t("mm.sub", { name: team.name })}
       footer={
-        <>
-          <button className={btnGhost} onClick={onClose}>
-            Cancel
-          </button>
-          <button className={btnPrimary} onClick={save}>
-            <IconCheck className="w-4 h-4" /> Save roster
-          </button>
-        </>
+        <button className={btnPrimary} onClick={onClose}>
+          <IconCheck className="w-4 h-4" /> {t("common.done")} · {tp("mm.selected", selected.length)}
+        </button>
       }
     >
-      <div className="relative mb-3">
-        <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
-        <TextInput
-          className="pl-9"
-          placeholder="Search people…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-      <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-        {list.length === 0 && <p className="text-sm text-dim py-4 text-center">Nobody matches that search.</p>}
-        {list.map((p) => {
-          const on = selected.includes(p.id);
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => toggle(p.id)}
-              className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-all duration-150 ${
-                on ? "border-mint/50 bg-mint/10" : "border-line2 hover:bg-panel2"
-              }`}
-            >
-              <Avatar name={p.name} hue={p.hue} size={30} />
-              <span className="flex-1 min-w-0">
-                <span className="block text-sm font-medium truncate">{p.name}</span>
-                <span className="block text-xs text-mut truncate">{p.role}</span>
-              </span>
-              <span
-                className={`w-5 h-5 rounded-full border inline-flex items-center justify-center transition ${
-                  on ? "bg-mint border-mint text-[#0b130e]" : "border-line2 text-transparent"
-                }`}
-              >
-                <IconCheck className="w-3 h-3" />
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {state.people.length === 0 ? (
+        <p className="text-sm text-dim text-center py-6">{t("mm.noPeople")}</p>
+      ) : (
+        <div className="space-y-3">
+          <div className="relative">
+            <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
+            <TextInput className="pl-9" placeholder={t("mm.searchPh")} value={query} onChange={(e) => setQuery(e.target.value)} />
+          </div>
+          <div className="max-h-72 overflow-y-auto -mx-1 px-1 space-y-1">
+            {people.length === 0 && <p className="text-sm text-dim text-center py-5">{t("mm.none")}</p>}
+            {people.map((p) => {
+              const on = selected.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => toggle(p.id)}
+                  className={`w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-all duration-150 ${
+                    on ? "border-mint/40 bg-mint/[0.07]" : "border-transparent hover:bg-panel2"
+                  }`}
+                >
+                  <Avatar name={p.name} hue={p.hue} size={30} />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium leading-tight truncate">{p.name}</span>
+                    <span className="block text-[11px] text-mut truncate">{p.role}</span>
+                  </span>
+                  <span
+                    className={`w-5 h-5 rounded-md border inline-flex items-center justify-center shrink-0 transition-all ${
+                      on ? "bg-mint border-mint text-[#0b130e]" : "border-line2 text-transparent"
+                    }`}
+                  >
+                    <IconCheck className="w-3 h-3" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -368,92 +311,70 @@ export function MembersModal({
 
 export function TaskModal({
   open,
-  onClose,
   task,
+  onClose,
+  prefill,
 }: {
   open: boolean;
-  onClose: () => void;
   task: Task | null;
+  onClose: () => void;
+  prefill?: { start: string; due: string } | null;
 }) {
   const { state, dispatch } = useStore();
+  const { t, tp } = useI18n();
   const { push } = useToast();
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    teamId: "",
-    assigneeIds: [] as string[],
-    dueDate: addDays(todayISO(), 7),
-    status: "todo" as TaskStatus,
-  });
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [teamId, setTeamId] = useState<string>("");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const [status, setStatus] = useState<TaskStatus>("todo");
+  const [startDate, setStartDate] = useState(todayISO());
+  const [dueDate, setDueDate] = useState(todayISO());
   const [err, setErr] = useState("");
+  const [dateErr, setDateErr] = useState("");
 
   useEffect(() => {
     if (!open) return;
+    setTitle(task?.title ?? "");
+    setDescription(task?.description ?? "");
+    setTeamId(task?.teamId ?? "");
+    setAssigneeIds(task?.assigneeIds ?? []);
+    setStatus(task?.status ?? "todo");
+    setStartDate(task?.startDate ?? prefill?.start ?? todayISO());
+    setDueDate(task?.dueDate ?? prefill?.due ?? todayISO());
     setErr("");
-    setForm(
-      task
-        ? {
-            title: task.title,
-            description: task.description,
-            teamId: task.teamId ?? "",
-            assigneeIds: task.assigneeIds,
-            dueDate: task.dueDate,
-            status: task.status,
-          }
-        : { title: "", description: "", teamId: "", assigneeIds: [], dueDate: addDays(todayISO(), 7), status: "todo" }
-    );
+    setDateErr("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, task]);
 
-  const countInvolved = (teamId: string, assigneeIds: string[]) => {
-    const team = state.teams.find((t) => t.id === teamId);
-    const ids = new Set([...(team?.memberIds ?? []), ...assigneeIds]);
-    return [...ids].filter((id) => state.people.some((p) => p.id === id)).length;
+  const candidate: Task = {
+    id: task?.id ?? "",
+    title: title.trim(),
+    description: description.trim(),
+    teamId: teamId || null,
+    assigneeIds,
+    status,
+    startDate,
+    dueDate,
+    createdAt: task?.createdAt ?? new Date().toISOString(),
+    completedAt: task?.completedAt ?? null,
   };
+  const involvedCount = involvedIds(state, candidate).length;
 
-  const save = () => {
-    if (!form.title.trim()) {
-      setErr("The task needs a title.");
-      return;
-    }
-    if (!form.dueDate) {
-      setErr("Pick a due date.");
-      return;
-    }
+  const submit = () => {
+    if (!title.trim()) return setErr(t("mtask.titleRequired"));
+    if (dueDate < startDate) return setDateErr(t("mtask.datesInvalid"));
     if (task) {
-      dispatch({
-        type: "UPDATE_TASK",
-        prev: task,
-        task: {
-          ...task,
-          title: form.title.trim(),
-          description: form.description.trim(),
-          teamId: form.teamId || null,
-          assigneeIds: form.assigneeIds,
-          dueDate: form.dueDate,
-          status: form.status,
-        },
-      });
-      push(`Task "${form.title.trim()}" updated`);
+      dispatch({ type: "UPDATE_TASK", task: { ...candidate, id: task.id }, prev: task });
+      push(t("mtask.updated"));
     } else {
-      const n = countInvolved(form.teamId, form.assigneeIds);
-      dispatch({
-        type: "ADD_TASK",
-        task: {
-          id: uid(),
-          title: form.title.trim(),
-          description: form.description.trim(),
-          teamId: form.teamId || null,
-          assigneeIds: form.assigneeIds,
-          status: form.status,
-          dueDate: form.dueDate,
-          createdAt: new Date().toISOString(),
-          completedAt: form.status === "done" ? todayISO() : null,
-        },
-      });
+      const created: Task = { ...candidate, id: uid() };
+      dispatch({ type: "ADD_TASK", task: created });
       push(
-        n > 0
-          ? `Task created — assignment logged for ${n} people`
-          : "Task created (no team or assignees yet)"
+        involvedCount > 0
+          ? t("mtask.created", { t: created.title, who: tp("mtask.person", involvedCount) })
+          : t("mtask.updated")
       );
     }
     onClose();
@@ -463,115 +384,100 @@ export function TaskModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={task ? "Edit task" : "New task"}
-      subtitle={task ? task.title : "Assign work to a team or individuals, with a due date"}
       wide
+      title={task ? t("mtask.editTitle") : t("mtask.title")}
       footer={
         <>
-          <button className={btnGhost} onClick={onClose}>
-            Cancel
-          </button>
-          <button className={btnPrimary} onClick={save}>
-            <IconCheck className="w-4 h-4" /> {task ? "Save changes" : "Create task"}
+          {involvedCount > 0 && (
+            <span className="mr-auto inline-flex items-center gap-2 text-xs text-mut">
+              <span className="flex -space-x-1.5">
+                {involvedIds(state, candidate)
+                  .slice(0, 4)
+                  .map((id) => {
+                    const p = state.people.find((x) => x.id === id)!;
+                    return <Avatar key={id} name={p.name} hue={p.hue} size={22} className="ring-2 ring-panel" />;
+                  })}
+              </span>
+              {tp("mtask.person", involvedCount)}
+            </span>
+          )}
+          <button className={btnGhost} onClick={onClose}>{t("common.cancel")}</button>
+          <button className={btnPrimary} onClick={submit}>
+            {task ? t("common.save") : t("common.create")}
           </button>
         </>
       }
     >
       <div className="space-y-4">
-        <Field label="Task title" error={err}>
-          <TextInput
-            autoFocus
-            placeholder="e.g. Prepare the monthly roster"
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-          />
+        <Field label={t("mtask.what")} error={err}>
+          <TextInput autoFocus value={title} placeholder={t("mtask.whatPh")} onChange={(e) => setTitle(e.target.value)} />
         </Field>
-        <Field label="Notes">
-          <TextArea
-            rows={2}
-            placeholder="Anything the team should know…"
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          />
+        <Field label={`${t("mtask.desc")} · ${t("common.optional")}`}>
+          <TextArea rows={2} value={description} placeholder={t("mtask.descPh")} onChange={(e) => setDescription(e.target.value)} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Assigned team">
-            <Select value={form.teamId} onChange={(e) => setForm((f) => ({ ...f, teamId: e.target.value }))}>
-              <option value="">— No team —</option>
-              {state.teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mut mb-1.5">{t("mtask.period")}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={t("mtask.from")}>
+              <TextInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </Field>
+            <Field label={t("mtask.to")} error={dateErr}>
+              <TextInput type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </Field>
+          </div>
+          <p className="text-[11px] text-dim mt-1.5">{t("mtask.periodHint")}</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label={t("mtask.team")}>
+            <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+              <option value="">{t("mtask.noTeam")}</option>
+              {state.teams.map((tm) => (
+                <option key={tm.id} value={tm.id}>
+                  {tm.name}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Due date">
-            <TextInput
-              type="date"
-              value={form.dueDate}
-              onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-            />
+          <Field label={t("mtask.status")}>
+            <Select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
+              {(["todo", "active", "done"] as TaskStatus[]).map((s) => (
+                <option key={s} value={s}>
+                  {t(TASK_STATUS_KEY[s])}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
-        <Field label="Also assign individuals">
-          {state.people.length === 0 ? (
-            <p className="text-sm text-dim">No people on the roster yet.</p>
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {state.people.map((p) => {
-                const on = form.assigneeIds.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() =>
-                      setForm((f) => ({
-                        ...f,
-                        assigneeIds: on
-                          ? f.assigneeIds.filter((x) => x !== p.id)
-                          : [...f.assigneeIds, p.id],
-                      }))
-                    }
-                    className={`inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs transition-all duration-150 ${
-                      on ? "border-mint/50 bg-mint/10 text-ink" : "border-line2 text-mut hover:text-ink hover:bg-panel2"
-                    }`}
-                  >
-                    <Avatar name={p.name} hue={p.hue} size={20} />
-                    {p.name.split(" ")[0]}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </Field>
-        <Field label="Starting status">
-          <div className="flex gap-2">
-            {(["todo", "active", "done"] as TaskStatus[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setForm((f) => ({ ...f, status: s }))}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${
-                  form.status === s
-                    ? s === "done"
-                      ? "border-mint/50 bg-mint/10 text-mint"
-                      : s === "active"
-                      ? "border-amber/50 bg-amber/10 text-amber"
-                      : "border-sky/50 bg-sky/10 text-sky"
-                    : "border-line2 text-mut hover:text-ink hover:bg-panel2"
-                }`}
-              >
-                {s === "todo" ? "To do" : s === "active" ? "Active" : "Done"}
-              </button>
-            ))}
-          </div>
-        </Field>
-        {form.teamId && (
-          <p className="text-xs text-mut">
-            Creating this task logs an <Chip className={KIND_META.task.chip}>Assignment</Chip> entry on the record
-            of every member of the chosen team.
+
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mut mb-1.5">
+            {t("mtask.individuals")}
           </p>
-        )}
+          <p className="text-[11px] text-dim mb-2">{t("mtask.indHint")}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {state.people.map((p) => {
+              const on = assigneeIds.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() =>
+                    setAssigneeIds((ids) => (on ? ids.filter((x) => x !== p.id) : [...ids, p.id]))
+                  }
+                  className={`inline-flex items-center gap-1.5 rounded-full border pl-1 pr-2.5 py-1 text-xs font-medium transition-all duration-150 ${
+                    on ? "border-mint/50 bg-mint/10 text-ink" : "border-line text-mut hover:border-line2 hover:text-ink"
+                  }`}
+                >
+                  <Avatar name={p.name} hue={p.hue} size={20} />
+                  {p.name.split(" ")[0]}
+                  {on && <IconCheck className="w-3 h-3 text-mint" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </Modal>
   );
@@ -581,62 +487,61 @@ export function TaskModal({
 
 export function EventModal({
   open,
-  onClose,
   personId,
+  onClose,
+  prefillDate,
 }: {
   open: boolean;
+  /** null = let the user pick the person inside the modal */
+  personId: string | null;
   onClose: () => void;
-  personId: string;
+  prefillDate?: string | null;
 }) {
   const { state, dispatch } = useStore();
+  const { t } = useI18n();
   const { push } = useToast();
-  const person = state.people.find((p) => p.id === personId);
+
   const [kind, setKind] = useState<EventKind>("observation");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(todayISO());
   const [endDate, setEndDate] = useState("");
   const [note, setNote] = useState("");
   const [err, setErr] = useState("");
+  const [picked, setPicked] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setKind("observation");
     setTitle("");
-    setDate(todayISO());
+    setDate(prefillDate ?? todayISO());
     setEndDate("");
     setNote("");
     setErr("");
+    setPicked(state.people[0]?.id ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, personId]);
 
+  const effectiveId = personId ?? picked;
+  const person = state.people.find((p) => p.id === effectiveId);
   if (!person) return null;
-  const isRange = RANGE_KINDS.includes(kind);
 
-  const save = () => {
-    if (!title.trim()) {
-      setErr("Describe what happened.");
-      return;
-    }
-    if (!date) {
-      setErr("Pick the date it happened.");
-      return;
-    }
-    if (isRange && endDate && endDate < date) {
-      setErr("The end date is before the start date.");
-      return;
-    }
+  const isRange = kind === "absence" || kind === "sick" || kind === "leave";
+
+  const submit = () => {
+    if (!title.trim()) return setErr(t("mev.required"));
     dispatch({
       type: "ADD_EVENT",
       event: makeEvent({
-        personId,
+        personId: person.id,
         kind,
         title: title.trim(),
         note: note.trim(),
-        date,
+        date: date || todayISO(),
         endDate: isRange && endDate ? endDate : null,
         taskId: null,
       }),
     });
-    push(`${KIND_META[kind].label} logged for ${person.name}`);
+    push(t("mev.saved", { name: person.name.split(" ")[0] }));
     onClose();
   };
 
@@ -644,26 +549,29 @@ export function EventModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Record an event"
-      subtitle={`On ${person.name}'s service record`}
-      wide
+      title={t("mev.titleFor", { name: person.name })}
       footer={
         <>
-          <button className={btnGhost} onClick={onClose}>
-            Cancel
-          </button>
-          <button className={btnPrimary} onClick={save}>
-            <IconCheck className="w-4 h-4" /> Log to record
-          </button>
+          <button className={btnGhost} onClick={onClose}>{t("common.cancel")}</button>
+          <button className={btnPrimary} onClick={submit}>{t("common.create")}</button>
         </>
       }
     >
       <div className="space-y-4">
+        {personId === null && (
+          <Field label={t("people.title")}>
+            <Select value={picked} onChange={(e) => setPicked(e.target.value)}>
+              {state.people.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {p.role}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
         <div>
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.12em] text-mut mb-1.5">
-            Type of event
-          </span>
-          <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mut mb-1.5">{t("mev.kind")}</p>
+          <div className="flex flex-wrap gap-1.5">
             {KIND_ORDER.map((k) => {
               const m = KIND_META[k];
               const on = kind === k;
@@ -672,62 +580,42 @@ export function EventModal({
                   key={k}
                   type="button"
                   onClick={() => setKind(k)}
-                  className={`flex flex-col items-center gap-1.5 rounded-lg border px-1 py-2.5 text-[10.5px] font-medium transition-all duration-150 ${
-                    on ? m.node : "border-line2 text-mut hover:text-ink hover:bg-panel2"
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 ${
+                    on ? m.chip : "border-line text-mut hover:border-line2 hover:text-ink"
                   }`}
                 >
-                  <m.Icon className="w-4 h-4" />
-                  {m.label.split(" ")[0]}
+                  <m.Icon className="w-3.5 h-3.5" />
+                  {t(m.key)}
                 </button>
               );
             })}
           </div>
         </div>
-        <Field label="What happened" error={err}>
-          <TextInput
-            autoFocus
-            placeholder={
-              kind === "commendation"
-                ? "e.g. Handled the audit single-handedly"
-                : kind === "misconduct"
-                ? "e.g. Skipped the safety checklist"
-                : kind === "absence"
-                ? "e.g. Absent — no call, no show"
-                : kind === "sick"
-                ? "e.g. Sick day — migraine"
-                : kind === "leave"
-                ? "e.g. Annual leave — approved"
-                : kind === "task"
-                ? "e.g. Handed the monthly report"
-                : "e.g. Suggested a better filing order"
-            }
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+
+        <Field label={t("mev.what")} error={err}>
+          <TextInput autoFocus value={title} placeholder={t("mev.whatPh")} onChange={(e) => setTitle(e.target.value)} />
         </Field>
-        <div className={`grid gap-3 ${isRange ? "grid-cols-2" : "grid-cols-2"}`}>
-          <Field label={isRange ? "From date" : "Date"}>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t("mev.date")}>
             <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
-          {isRange ? (
-            <Field label="Until (optional)">
-              <TextInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </Field>
-          ) : (
-            <Field label="Context">
-              <TextInput
-                placeholder="Optional one-liner"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </Field>
-          )}
-        </div>
-        {isRange && (
-          <Field label="Notes">
-            <TextArea rows={2} placeholder="Details, approvals, certificates…" value={note} onChange={(e) => setNote(e.target.value)} />
+          <Field label={`${t("mev.end")} · ${t("common.optional")}`}>
+            <TextInput
+              type="date"
+              value={endDate}
+              min={date}
+              disabled={!isRange}
+              onChange={(e) => setEndDate(e.target.value)}
+              className={!isRange ? "opacity-40" : ""}
+            />
           </Field>
-        )}
+        </div>
+        {isRange && <p className="text-[11px] text-dim -mt-2">{t("mev.endHint")}</p>}
+
+        <Field label={`${t("mev.note")} · ${t("common.optional")}`}>
+          <TextArea rows={3} value={note} placeholder={t("mev.notePh")} onChange={(e) => setNote(e.target.value)} />
+        </Field>
       </div>
     </Modal>
   );

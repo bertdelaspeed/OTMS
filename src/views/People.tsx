@@ -6,11 +6,13 @@ import { fmtDate } from "../dates";
 import { Avatar, Chip, DangerAction, EmptyState, StatusPill, TextInput, btnIcon, btnPrimary, panelCls, useToast } from "../ui";
 import { IconBriefcase, IconChevronRight, IconPencil, IconSearch, IconUserPlus, IconUsers } from "../icons";
 import { PersonModal } from "../modals";
+import { useI18n } from "../i18n";
 
 type Filter = StatusKey | "all";
 
 export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void }) {
   const { state, dispatch } = useStore();
+  const { t, tp } = useI18n();
   const { push } = useToast();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -43,20 +45,18 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
 
   const remove = (p: Person) => {
     dispatch({ type: "REMOVE_PERSON", id: p.id });
-    push(`${p.name} removed from the roster`, "warn");
+    push(t("people.removed", { name: p.name }), "warn");
   };
 
   return (
     <div className="space-y-4">
       <header className="reveal flex flex-wrap items-center justify-between gap-3 pt-1">
         <div>
-          <h1 className="font-display font-bold text-4xl tracking-tight leading-none">People</h1>
-          <p className="text-mut text-sm mt-2">
-            {state.people.length} subordinate{state.people.length === 1 ? "" : "s"} under your watch
-          </p>
+          <h1 className="font-display font-bold text-4xl tracking-tight leading-none">{t("people.title")}</h1>
+          <p className="text-mut text-sm mt-2">{tp("people.sub", state.people.length)}</p>
         </div>
         <button className={btnPrimary} onClick={() => setModal({ person: null })}>
-          <IconUserPlus className="w-4 h-4" /> Add person
+          <IconUserPlus className="w-4 h-4" /> {t("people.add")}
         </button>
       </header>
 
@@ -66,7 +66,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
           <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-dim" />
           <TextInput
             className="pl-9"
-            placeholder="Search name or role…"
+            placeholder={t("people.searchPh")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -85,7 +85,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
                 {f !== "all" && (
                   <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[f as StatusKey].dot} ${counts[f] === 0 ? "opacity-30" : ""}`} />
                 )}
-                {f === "all" ? "Everyone" : STATUS_META[f as StatusKey].label}
+                {f === "all" ? t("people.everyone") : t(STATUS_META[f as StatusKey].key)}
                 <span className="font-mono text-[10px] text-dim">{counts[f]}</span>
               </button>
             );
@@ -98,11 +98,11 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
         <div className={panelCls}>
           <EmptyState
             icon={<IconUsers className="w-5 h-5" />}
-            title="Your roster is empty"
-            body="Add the people who report to you — then log their deeds, absences and assignments."
+            title={t("people.emptyTitle")}
+            body={t("people.emptyBody")}
             action={
               <button className={btnPrimary} onClick={() => setModal({ person: null })}>
-                <IconUserPlus className="w-4 h-4" /> Add your first person
+                <IconUserPlus className="w-4 h-4" /> {t("people.emptyAction")}
               </button>
             }
           />
@@ -111,8 +111,8 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
         <div className={panelCls}>
           <EmptyState
             icon={<IconSearch className="w-5 h-5" />}
-            title="No matches"
-            body="Nobody fits that search and filter combination. Loosen it up a little."
+            title={t("people.noMatchTitle")}
+            body={t("people.noMatchBody")}
           />
         </div>
       ) : (
@@ -131,26 +131,26 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
               </div>
 
               <div className="hidden md:flex items-center gap-1.5 w-44 shrink-0">
-                {r.teams.length === 0 && <span className="text-xs text-dim">No team</span>}
-                {r.teams.slice(0, 2).map((t) => (
-                  <Chip key={t.id} className={TEAM_COLORS[t.color].chip}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${TEAM_COLORS[t.color].dot}`} />
-                    {t.name}
+                {r.teams.length === 0 && <span className="text-xs text-dim">{t("people.noTeam")}</span>}
+                {r.teams.slice(0, 2).map((tm) => (
+                  <Chip key={tm.id} className={TEAM_COLORS[tm.color].chip}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${TEAM_COLORS[tm.color].dot}`} />
+                    {tm.name}
                   </Chip>
                 ))}
               </div>
 
-              <div className="w-[104px] shrink-0">
+              <div className="w-[112px] shrink-0">
                 <StatusPill status={r.s.key} pulse />
               </div>
 
               <div className="hidden lg:flex items-center gap-1.5 w-48 shrink-0 text-xs">
                 {r.load.length === 0 ? (
-                  <span className="text-dim">No active task</span>
+                  <span className="text-dim">{t("people.noActive")}</span>
                 ) : (
                   <>
                     <IconBriefcase className="w-3.5 h-3.5 text-amber shrink-0" />
-                    <span className="truncate text-mut" title={r.load.map((t) => t.title).join(", ")}>
+                    <span className="truncate text-mut" title={r.load.map((x) => x.title).join(", ")}>
                       {r.load[0].title}
                       {r.load.length > 1 && ` +${r.load.length - 1}`}
                     </span>
@@ -164,23 +164,23 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${KIND_META[r.last.kind].dot}`} />
                     <span className="font-mono text-[10.5px] shrink-0">{fmtDate(r.last.date)}</span>
                     <span className="truncate" title={r.last.title}>
-                      {KIND_META[r.last.kind].label}
+                      {t(KIND_META[r.last.kind].key)}
                     </span>
                   </>
                 ) : (
-                  <span className="text-dim">No record yet</span>
+                  <span className="text-dim">{t("people.noRecord")}</span>
                 )}
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button
                   className={`${btnIcon} hover:text-amber`}
-                  title="Edit"
+                  title={t("common.edit")}
                   onClick={() => setModal({ person: r.p })}
                 >
                   <IconPencil className="w-4 h-4" />
                 </button>
-                <DangerAction onConfirm={() => remove(r.p)} label={`Remove ${r.p.name}`} />
+                <DangerAction onConfirm={() => remove(r.p)} label={t("profile.remove", { name: r.p.name })} />
               </div>
 
               <IconChevronRight className="hidden sm:block w-4 h-4 text-dim group-hover:text-mut shrink-0 transition-colors" />

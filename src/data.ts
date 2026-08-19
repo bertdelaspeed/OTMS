@@ -1,4 +1,4 @@
-import type { AppState, Person, PersonEvent, Task, Team, EventKind } from "./types";
+import type { AppState, EventKind, Person, PersonEvent, Task, Team } from "./types";
 import { addDays, todayISO } from "./dates";
 
 export function uid(): string {
@@ -72,6 +72,7 @@ export function seedState(): AppState {
       teamId: "team-bo",
       assigneeIds: [],
       status: "active",
+      startDate: d(-3),
       dueDate: d(2),
       createdAt: at(5),
       completedAt: null,
@@ -83,6 +84,7 @@ export function seedState(): AppState {
       teamId: "team-bo",
       assigneeIds: [],
       status: "active",
+      startDate: d(-6),
       dueDate: d(-1),
       createdAt: at(9),
       completedAt: null,
@@ -94,6 +96,7 @@ export function seedState(): AppState {
       teamId: "team-cs",
       assigneeIds: [],
       status: "active",
+      startDate: d(-1),
       dueDate: d(4),
       createdAt: at(3),
       completedAt: null,
@@ -105,8 +108,21 @@ export function seedState(): AppState {
       teamId: "team-fo",
       assigneeIds: [],
       status: "todo",
+      startDate: d(1),
       dueDate: d(6),
       createdAt: at(4),
+      completedAt: null,
+    },
+    {
+      id: "t-tour",
+      title: "Regional site inspection tour",
+      description: "Three-day tour of the northern depots with the inspection van.",
+      teamId: "team-fo",
+      assigneeIds: [],
+      status: "todo",
+      startDate: d(2),
+      dueDate: d(5),
+      createdAt: at(2),
       completedAt: null,
     },
     {
@@ -116,6 +132,7 @@ export function seedState(): AppState {
       teamId: "team-fo",
       assigneeIds: [],
       status: "todo",
+      startDate: d(8),
       dueDate: d(9),
       createdAt: at(2),
       completedAt: null,
@@ -127,6 +144,7 @@ export function seedState(): AppState {
       teamId: "team-cs",
       assigneeIds: [],
       status: "todo",
+      startDate: d(10),
       dueDate: d(12),
       createdAt: at(1),
       completedAt: null,
@@ -138,6 +156,7 @@ export function seedState(): AppState {
       teamId: "team-bo",
       assigneeIds: [],
       status: "done",
+      startDate: d(-12),
       dueDate: d(-5),
       createdAt: at(14),
       completedAt: d(-6),

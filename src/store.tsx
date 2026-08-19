@@ -12,7 +12,7 @@ import type {
 import { seedState, uid } from "./data";
 import { todayISO } from "./dates";
 
-const KEY = "rollcall.state.v1";
+const KEY = "rollcall.state.v2";
 
 export type Action =
   | { type: "ADD_PERSON"; person: Person; teamIds: string[] }
@@ -39,6 +39,22 @@ export function involvedIds(state: AppState, task: Task): string[] {
   const team = task.teamId ? state.teams.find((t) => t.id === task.teamId) : null;
   const ids = new Set<string>([...(team?.memberIds ?? []), ...task.assigneeIds]);
   return [...ids].filter((id) => state.people.some((p) => p.id === id));
+}
+
+/** True when the task's work period covers the given day. */
+export function taskCovers(task: Task, day: string): boolean {
+  return task.startDate <= day && day <= task.dueDate;
+}
+
+/**
+ * True when the task makes its people unavailable on `day`:
+ * an in-progress (active) task always does; a planned (todo) task does
+ * only inside its work period. Done tasks never do.
+ */
+export function taskBlocks(task: Task, day: string): boolean {
+  if (task.status === "done") return false;
+  if (task.status === "active") return true;
+  return taskCovers(task, day);
 }
 
 function completionEvents(state: AppState, task: Task): PersonEvent[] {
@@ -164,12 +180,26 @@ function reducer(state: AppState, a: Action): AppState {
   }
 }
 
+/** Tolerate older backups: give tasks without a startDate a sane one. */
+function normalize(s: AppState): AppState {
+  return {
+    ...s,
+    tasks: (s.tasks ?? []).map((t) => ({
+      ...t,
+      startDate:
+        t.startDate ?? (t.createdAt ? t.createdAt.slice(0, 10) : t.dueDate) <= t.dueDate
+          ? t.startDate ?? (t.createdAt ? t.createdAt.slice(0, 10) : t.dueDate)
+          : t.dueDate,
+    })),
+  };
+}
+
 function load(): AppState {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw) as AppState;
-      if (s && Array.isArray(s.people) && Array.isArray(s.events)) return s;
+      if (s && Array.isArray(s.people) && Array.isArray(s.events)) return normalize(s);
     }
   } catch {
     /* corrupted storage — fall through to seed */
@@ -220,12 +250,23 @@ export function activeTasksFor(state: AppState, personId: string): Task[] {
   return tasksFor(state, personId).filter((t) => t.status === "active");
 }
 
+/** Tasks that make this person unavailable on `day`, soonest due first. */
+export function blockingTasksOn(state: AppState, personId: string, day: string): Task[] {
+  return tasksFor(state, personId).filter((t) => taskBlocks(t, day));
+}
+
 export interface StatusInfo {
   key: StatusKey;
   detail: string;
 }
 
-/** Live status: an absence/sick/leave covering today wins, then active tasks, else available. */
+/**
+ * Live status on today:
+ * 1. an absence / sick / leave record covering today wins;
+ * 2. otherwise a task that "takes" the person today (active, or planned
+ *    inside its work period) marks them on-task;
+ * 3. otherwise they are available.
+ */
 export function personStatus(state: AppState, personId: string): StatusInfo {
   const today = todayISO();
   const out = state.events
@@ -240,12 +281,12 @@ export function personStatus(state: AppState, personId: string): StatusInfo {
     const key: StatusKey = out.kind === "absence" ? "absent" : out.kind === "sick" ? "sick" : "leave";
     return { key, detail: out.title };
   }
-  const active = activeTasksFor(state, personId);
-  if (active.length > 0) {
-    const more = active.length - 1;
-    return { key: "on-task", detail: active[0].title + (more > 0 ? ` +${more} more` : "") };
+  const blocking = blockingTasksOn(state, personId, today);
+  if (blocking.length > 0) {
+    const more = blocking.length - 1;
+    return { key: "on-task", detail: blocking[0].title + (more > 0 ? ` +${more}` : "") };
   }
-  return { key: "available", detail: "No active assignments" };
+  return { key: "available", detail: "" };
 }
 
 export function personLastEvent(state: AppState, personId: string): PersonEvent | undefined {

@@ -8,8 +8,9 @@ import {
 } from "react";
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import type { StatusKey, TaskStatus } from "./types";
-import { STATUS_META, TASK_STATUS_LABEL } from "./meta";
+import { STATUS_META, TASK_STATUS_KEY } from "./meta";
 import { IconCheck, IconTrash, IconX } from "./icons";
+import { useI18n } from "./i18n";
 
 /* ---------- class recipes ---------- */
 
@@ -25,7 +26,7 @@ export const btnIcon =
   "inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line2 text-mut hover:text-ink hover:bg-panel2 hover:border-line2 active:scale-95 transition-all duration-150";
 
 export const inputCls =
-  "w-full bg-panel2 border border-line2 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-dim outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/15 transition";
+  "w-full bg-panel2 border border-line2 rounded-lg px-3 py-2 text-sm text-ink placeholder:text-dim outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/15 transition disabled:cursor-not-allowed";
 
 /* ---------- toasts ---------- */
 
@@ -98,6 +99,7 @@ export function Modal({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -106,7 +108,6 @@ export function Modal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
-
   if (!open) return null;
 
   return (
@@ -120,7 +121,7 @@ export function Modal({
             <h2 className="font-display font-semibold text-lg leading-tight">{title}</h2>
             {subtitle && <p className="text-xs text-mut mt-0.5">{subtitle}</p>}
           </div>
-          <button className={btnIcon} onClick={onClose} aria-label="Close">
+          <button className={btnIcon} onClick={onClose} aria-label={t("common.close")}>
             <IconX className="w-4 h-4" />
           </button>
         </div>
@@ -216,11 +217,12 @@ export function Chip({ className = "", children }: { className?: string; childre
 }
 
 export function StatusPill({ status, pulse = false }: { status: StatusKey; pulse?: boolean }) {
+  const { t } = useI18n();
   const m = STATUS_META[status];
   return (
     <Chip className={m.chip}>
       <span className={`w-1.5 h-1.5 rounded-full ${m.dot} ${pulse && status === "available" ? "pulse-dot" : ""}`} />
-      {m.label}
+      {t(m.key)}
     </Chip>
   );
 }
@@ -258,11 +260,12 @@ export function DangerAction({
   label?: string;
   className?: string;
 }) {
+  const { t } = useI18n();
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), 2600);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setArmed(false), 2600);
+    return () => window.clearTimeout(timer);
   }, [armed]);
 
   if (armed) {
@@ -275,7 +278,7 @@ export function DangerAction({
         }}
         className={`inline-flex items-center gap-1.5 rounded-lg bg-coral/15 border border-coral/50 text-coral text-xs font-semibold px-2.5 py-1.5 hover:bg-coral/25 transition ${className}`}
       >
-        <IconCheck className="w-3.5 h-3.5" /> Confirm?
+        <IconCheck className="w-3.5 h-3.5" /> {t("common.confirmDelete")}
       </button>
     );
   }
@@ -294,7 +297,33 @@ export function DangerAction({
   );
 }
 
-/* ---------- task status segmented control ---------- */
+/* ---------- segmented controls ---------- */
+
+export function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  return (
+    <div className="inline-flex rounded-lg border border-line2 bg-panel2/60 p-0.5 gap-0.5">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
+            value === o.value ? "bg-raise text-ink shadow-sm" : "text-mut hover:text-ink"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const SEG_ACTIVE: Record<TaskStatus, string> = {
   todo: "bg-sky/15 text-sky border-sky/40",
@@ -309,6 +338,7 @@ export function StatusSegments({
   value: TaskStatus;
   onChange: (s: TaskStatus) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="inline-flex rounded-lg border border-line2 overflow-hidden bg-panel2/60">
       {(["todo", "active", "done"] as TaskStatus[]).map((s) => (
@@ -322,7 +352,7 @@ export function StatusSegments({
             value === s ? SEG_ACTIVE[s] : "text-dim hover:text-ink"
           }`}
         >
-          {TASK_STATUS_LABEL[s]}
+          {t(TASK_STATUS_KEY[s])}
         </button>
       ))}
     </div>

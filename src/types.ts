@@ -1,4 +1,4 @@
-export type ViewKey = "dashboard" | "people" | "teams" | "tasks";
+export type ViewKey = "dashboard" | "people" | "teams" | "tasks" | "calendar";
 
 export type EventKind =
   | "commendation"
@@ -41,7 +41,8 @@ export interface Task {
   teamId: string | null;
   assigneeIds: string[];
   status: TaskStatus;
-  dueDate: string; // ISO date
+  startDate: string; // ISO date — work period start; people are "taken" from here
+  dueDate: string; // ISO date — work period end / deadline
   createdAt: string; // ISO datetime
   completedAt: string | null;
 }

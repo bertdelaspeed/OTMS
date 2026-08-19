@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { EventKind } from "../types";
 import { personStatus, tasksFor, teamsOf, useStore } from "../store";
-import { KIND_META, TEAM_COLORS } from "../meta";
+import { KIND_META } from "../meta";
 import { daysBetween, dueLabel, fmtDate, fmtDateYear, relTime, spanDays, todayISO } from "../dates";
 import {
   Avatar,
@@ -24,12 +24,23 @@ import {
   IconPlus,
 } from "../icons";
 import { EventModal, PersonModal } from "../modals";
+import { useI18n } from "../i18n";
 
 const DUE_TONE_CLS: Record<string, string> = {
   late: "text-coral bg-coral/10 border-coral/30",
   today: "text-amber bg-amber/10 border-amber/30",
   soon: "text-sky bg-sky/10 border-sky/30",
   later: "text-mut bg-panel2 border-line2",
+};
+
+const KIND_STAT_KEY: Record<EventKind, string> = {
+  commendation: "profile.k.commendation",
+  misconduct: "profile.k.misconduct",
+  absence: "profile.k.absence",
+  sick: "profile.k.sick",
+  leave: "profile.k.leave",
+  task: "profile.k.task",
+  observation: "profile.k.observation",
 };
 
 type KindFilter = EventKind | "all";
@@ -44,6 +55,7 @@ export function Profile({
   onDeleted: () => void;
 }) {
   const { state, dispatch } = useStore();
+  const { t, tp, lang } = useI18n();
   const { push } = useToast();
   const [filter, setFilter] = useState<KindFilter>("all");
   const [eventOpen, setEventOpen] = useState(false);
@@ -65,28 +77,33 @@ export function Profile({
   const load = tasksFor(state, personId);
   const tenure = Math.max(daysBetween(person.joinedAt, todayISO()), 0);
 
-  const kindStats = (["commendation", "misconduct", "absence", "sick", "leave", "task", "observation"] as EventKind[]).map(
-    (k) => {
-      const list = events.filter((e) => e.kind === k);
-      const isRange = k === "absence" || k === "sick" || k === "leave";
-      const days = list.reduce((n, e) => n + spanDays(e.date, e.endDate), 0);
-      return { k, n: list.length, days, ranged: isRange };
-    }
-  );
+  const kindStats = (Object.keys(KIND_STAT_KEY) as EventKind[]).map((k) => {
+    const list = events.filter((e) => e.kind === k);
+    const isRange = k === "absence" || k === "sick" || k === "leave";
+    const days = list.reduce((n, e) => n + spanDays(e.date, e.endDate), 0);
+    return { k, n: list.length, days, ranged: isRange };
+  });
 
   const presentKinds = kindStats.filter((s) => s.n > 0).map((s) => s.k);
   const visible = events.filter((e) => filter === "all" || e.kind === filter);
 
   const removeEvent = (id: string, title: string) => {
     dispatch({ type: "REMOVE_EVENT", id });
-    push(`"${title}" removed from the record`, "warn");
+    push(t("profile.removedEntry", { title }), "warn");
   };
 
   const removePerson = () => {
     dispatch({ type: "REMOVE_PERSON", id: person.id });
-    push(`${person.name} removed from the roster`, "warn");
+    push(t("people.removed", { name: person.name }), "warn");
     onDeleted();
   };
+
+  const statusHint =
+    status.key === "available"
+      ? t("profile.hintFree")
+      : status.key === "on-task"
+      ? t("profile.hintTask", { x: status.detail })
+      : status.detail;
 
   return (
     <div className="space-y-4">
@@ -94,7 +111,7 @@ export function Profile({
         onClick={onBack}
         className="reveal inline-flex items-center gap-2 text-sm text-mut hover:text-ink transition-colors"
       >
-        <IconArrowLeft className="w-4 h-4" /> Back to roster
+        <IconArrowLeft className="w-4 h-4" /> {t("profile.back")}
       </button>
 
       {/* Header */}
@@ -113,17 +130,11 @@ export function Profile({
               {teams.length > 0 && (
                 <>
                   {" · "}
-                  {teams.map((t) => t.name).join(", ")}
+                  {teams.map((tm) => tm.name).join(", ")}
                 </>
               )}
             </p>
-            <p className="text-xs text-dim mt-1">
-              {status.key === "available"
-                ? "Free for new assignments right now."
-                : status.key === "on-task"
-                ? `Working on: ${status.detail}`
-                : status.detail}
-            </p>
+            <p className="text-xs text-dim mt-1">{statusHint}</p>
             <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-4 text-xs text-mut">
               {person.email && (
                 <span className="inline-flex items-center gap-1.5">
@@ -136,19 +147,20 @@ export function Profile({
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5">
-                <IconCalendar className="w-3.5 h-3.5 text-dim" /> Joined {fmtDateYear(person.joinedAt)} ·{" "}
-                <span className="font-mono text-[10.5px]">{tenure}d on roster</span>
+                <IconCalendar className="w-3.5 h-3.5 text-dim" /> {t("profile.joined")}{" "}
+                {fmtDateYear(person.joinedAt)} ·{" "}
+                <span className="font-mono text-[10.5px]">{t("profile.tenure", { n: tenure })}</span>
               </span>
             </div>
           </div>
           <div className="flex sm:flex-col gap-2 shrink-0">
             <button className={btnPrimary} onClick={() => setEventOpen(true)}>
-              <IconPlus className="w-4 h-4" /> Record event
+              <IconPlus className="w-4 h-4" /> {t("profile.logEvent")}
             </button>
             <button className={btnGhost} onClick={() => setEditOpen(true)}>
-              <IconPencil className="w-4 h-4" /> Edit
+              <IconPencil className="w-4 h-4" /> {t("profile.edit")}
             </button>
-            <DangerAction onConfirm={removePerson} label={`Remove ${person.name}`} />
+            <DangerAction onConfirm={removePerson} label={t("profile.remove", { name: person.name })} />
           </div>
         </div>
       </section>
@@ -167,10 +179,14 @@ export function Profile({
               </span>
               <p className="font-display font-bold text-xl leading-none mt-2">
                 {s.ranged ? s.days : s.n}
-                {s.ranged && <span className="text-xs text-mut font-body font-normal">d</span>}
+                {s.ranged && (
+                  <span className="text-xs text-mut font-body font-normal">
+                    {lang === "fr" ? "j" : "d"}
+                  </span>
+                )}
               </p>
               <p className="text-[10px] font-mono uppercase tracking-[0.1em] text-mut mt-1">
-                {s.ranged ? `${m.label} days` : m.label + (s.n === 1 ? "" : "s")}
+                {t(KIND_STAT_KEY[s.k])}
               </p>
             </div>
           );
@@ -180,25 +196,26 @@ export function Profile({
       <div className="grid lg:grid-cols-3 gap-4 items-start">
         {/* Current load */}
         <section className={`${panelCls} reveal`} style={{ animationDelay: "160ms" }}>
-          <h2 className="font-display font-semibold text-lg px-4 sm:px-5 pt-4 pb-1">Current load</h2>
+          <h2 className="font-display font-semibold text-lg px-4 sm:px-5 pt-4 pb-1">{t("profile.load")}</h2>
           <div className="px-2.5 sm:px-3.5 pb-3">
             {load.length === 0 && (
-              <p className="text-sm text-dim px-2 py-5 text-center">
-                No open tasks — available for new work.
-              </p>
+              <p className="text-sm text-dim px-2 py-5 text-center">{t("profile.loadEmpty")}</p>
             )}
-            {load.map((t) => {
-              const due = dueLabel(t.dueDate);
-              const team = state.teams.find((x) => x.id === t.teamId);
+            {load.map((task) => {
+              const due = dueLabel(task.dueDate);
+              const team = state.teams.find((x) => x.id === task.teamId);
               return (
-                <div key={t.id} className="flex items-center gap-2.5 px-2 py-2.5 rounded-lg hover:bg-panel2/70 transition-colors">
+                <div key={task.id} className="flex items-center gap-2.5 px-2 py-2.5 rounded-lg hover:bg-panel2/70 transition-colors">
                   <IconBriefcase
-                    className={`w-4 h-4 shrink-0 ${t.status === "active" ? "text-amber" : "text-sky"}`}
+                    className={`w-4 h-4 shrink-0 ${task.status === "active" ? "text-amber" : "text-sky"}`}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate leading-tight">{t.title}</p>
+                    <p className="text-sm font-medium truncate leading-tight">{task.title}</p>
                     <p className="text-[11px] text-mut truncate">
-                      {team?.name ?? "Individual"} · {t.status === "active" ? "in progress" : "queued"}
+                      {team?.name ?? t("profile.individual")} ·{" "}
+                      <span className="font-mono">
+                        {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
+                      </span>
                     </p>
                   </div>
                   <Chip className={DUE_TONE_CLS[due.tone]}>{due.text}</Chip>
@@ -212,10 +229,8 @@ export function Profile({
         <section className={`${panelCls} lg:col-span-2 reveal`} style={{ animationDelay: "210ms" }}>
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 pt-4 pb-3">
             <div>
-              <h2 className="font-display font-semibold text-lg">Service record</h2>
-              <p className="text-xs text-mut mt-0.5">
-                {events.length} entr{events.length === 1 ? "y" : "ies"} on file
-              </p>
+              <h2 className="font-display font-semibold text-lg">{t("profile.record")}</h2>
+              <p className="text-xs text-mut mt-0.5">{tp("profile.entry", events.length)}</p>
             </div>
           </div>
           <div className="flex flex-wrap gap-1.5 px-4 sm:px-5 pb-3">
@@ -231,7 +246,7 @@ export function Profile({
                   }`}
                 >
                   {f !== "all" && <span className={`w-1.5 h-1.5 rounded-full ${KIND_META[f as EventKind].dot}`} />}
-                  {f === "all" ? "Everything" : KIND_META[f as EventKind].label}
+                  {f === "all" ? t("profile.everything") : t(KIND_META[f as EventKind].key)}
                   <span className="font-mono text-[10px] text-dim">{n}</span>
                 </button>
               );
@@ -242,11 +257,11 @@ export function Profile({
             {visible.length === 0 && (
               <EmptyState
                 icon={<IconCalendar className="w-5 h-5" />}
-                title="A clean sheet"
-                body="Nothing logged under this filter yet. Record the first deed, absence or observation."
+                title={t("profile.emptyTitle")}
+                body={t("profile.emptyBody")}
                 action={
                   <button className={btnPrimary} onClick={() => setEventOpen(true)}>
-                    <IconPlus className="w-4 h-4" /> Record an event
+                    <IconPlus className="w-4 h-4" /> {t("profile.emptyAction")}
                   </button>
                 }
               />
@@ -272,15 +287,16 @@ export function Profile({
                       <p className="text-sm font-semibold leading-snug">{e.title}</p>
                       {e.note && <p className="text-xs text-mut mt-1 leading-relaxed">{e.note}</p>}
                       <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
-                        <Chip className={m.chip}>{m.label}</Chip>
+                        <Chip className={m.chip}>{t(m.key)}</Chip>
                         <span className="font-mono text-[10.5px] text-dim">
                           {fmtDate(e.date)}
-                          {e.endDate ? ` → ${fmtDate(e.endDate)}` : ""} · logged {relTime(e.createdAt)}
+                          {e.endDate ? ` → ${fmtDate(e.endDate)}` : ""} ·{" "}
+                          {t("profile.logged", { t: relTime(e.createdAt) })}
                         </span>
                       </div>
                     </div>
                     <span className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-                      <DangerAction onConfirm={() => removeEvent(e.id, e.title)} label="Remove entry" />
+                      <DangerAction onConfirm={() => removeEvent(e.id, e.title)} label={t("profile.removeEntry")} />
                     </span>
                   </div>
                 </div>

@@ -224,3 +224,50 @@ export const IconRefresh = (p: P) => (
     <path d="M3 21v-5h5" />
   </svg>
 );
+
+export const IconChevronLeft = (p: P) => (
+  <svg {...base} strokeWidth={2} {...p}>
+    <path d="M15 6l-6 6 6 6" />
+  </svg>
+);
+
+export const IconArrowRight = (p: P) => (
+  <svg {...base} strokeWidth={2} {...p}>
+    <path d="M5 12h14" />
+    <path d="M13 6l6 6-6 6" />
+  </svg>
+);
+
+export const IconDownload = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 3v12" />
+    <path d="M7 10l5 5 5-5" />
+    <path d="M4 21h16" />
+  </svg>
+);
+
+export const IconUpload = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M12 15V3" />
+    <path d="M7 8l5-5 5 5" />
+    <path d="M4 21h16" />
+  </svg>
+);
+
+export const IconGlobe = (p: P) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3a14.5 14.5 0 0 1 0 18a14.5 14.5 0 0 1 0-18z" />
+  </svg>
+);
+
+export const IconGrid = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="3" width="5.5" height="5.5" rx="1" />
+    <rect x="15.5" y="3" width="5.5" height="5.5" rx="1" />
+    <rect x="3" y="15.5" width="5.5" height="5.5" rx="1" />
+    <rect x="15.5" y="15.5" width="5.5" height="5.5" rx="1" />
+    <rect x="9.25" y="9.25" width="5.5" height="5.5" rx="1" />
+  </svg>
+);

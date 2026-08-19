@@ -4,6 +4,7 @@ import { KIND_META, STATUS_META, STATUS_ORDER, TEAM_COLORS } from "../meta";
 import {
   addDays,
   dueLabel,
+  fmtDate,
   fmtDateFull,
   relTime,
   todayISO,
@@ -12,6 +13,7 @@ import {
 } from "../dates";
 import { Avatar, Chip, EmptyState, StatusPill, panelCls } from "../ui";
 import { IconChevronRight, IconInbox } from "../icons";
+import { useI18n } from "../i18n";
 import type { ViewKey } from "../types";
 
 const DUE_TONE_CLS: Record<string, string> = {
@@ -29,6 +31,7 @@ export function Dashboard({
   onNavigate: (v: ViewKey) => void;
 }) {
   const { state } = useStore();
+  const { t, tp } = useI18n();
   const today = todayISO();
 
   const roster = useMemo(
@@ -79,24 +82,21 @@ export function Dashboard({
       <header className="reveal flex flex-wrap items-end justify-between gap-4 pt-1">
         <div>
           <p className="font-mono text-[11px] text-mut uppercase tracking-[0.2em] mb-2.5">
-            {fmtDateFull(today)} · Week {weekNumber(today)}
+            {fmtDateFull(today)} · {t("cal.weekN", { n: weekNumber(today) })}
           </p>
           <h1 className="font-display font-bold text-4xl sm:text-[44px] tracking-tight leading-none">
-            Morning rollcall
+            {t("dash.title")}
           </h1>
-          <p className="text-mut text-sm mt-2.5 max-w-lg">
-            Everything that moves in your office — who is in, who is out, who is on what, and the
-            paper trail behind each of them.
-          </p>
+          <p className="text-mut text-sm mt-2.5 max-w-xl">{t("dash.sub")}</p>
         </div>
         <div className="flex items-baseline gap-2.5 pb-1">
           <span className="font-display font-bold text-5xl text-mint leading-none">
             {counts.available}
           </span>
           <span className="text-sm text-mut leading-snug">
-            of {total} free
+            {t("dash.freeOf", { n: total })}
             <br />
-            right now
+            {t("dash.rightNow")}
           </span>
         </div>
       </header>
@@ -105,16 +105,16 @@ export function Dashboard({
       <section className={`${panelCls} p-4 sm:p-5 reveal`} style={{ animationDelay: "60ms" }}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut">
-            Floor composition
+            {t("dash.floor")}
           </h2>
-          <span className="font-mono text-[11px] text-dim">{total} on roster</span>
+          <span className="font-mono text-[11px] text-dim">{t("dash.rosterCount", { n: total })}</span>
         </div>
         <div className="flex h-3 rounded-full overflow-hidden bg-panel2 border border-line">
           {total > 0 &&
             STATUS_ORDER.filter((k) => counts[k] > 0).map((k) => (
               <div
                 key={k}
-                title={`${STATUS_META[k].label}: ${counts[k]}`}
+                title={`${t(STATUS_META[k].key)}: ${counts[k]}`}
                 className={`${STATUS_META[k].bar} transition-all duration-700 ease-out first:rounded-l-full last:rounded-r-full`}
                 style={{ width: `${(counts[k] / total) * 100}%` }}
               />
@@ -124,7 +124,7 @@ export function Dashboard({
           {STATUS_ORDER.map((k) => (
             <span key={k} className="inline-flex items-center gap-2 text-xs text-mut">
               <span className={`w-2 h-2 rounded-full ${STATUS_META[k].dot} ${counts[k] === 0 ? "opacity-25" : ""}`} />
-              {STATUS_META[k].label}
+              {t(STATUS_META[k].key)}
               <span className={`font-mono font-semibold ${counts[k] > 0 ? "text-ink" : "text-dim"}`}>
                 {counts[k]}
               </span>
@@ -139,10 +139,10 @@ export function Dashboard({
         style={{ animationDelay: "110ms" }}
       >
         {[
-          { label: "Open tasks", value: openTasks.length, cls: "text-amber" },
-          { label: "Due within 7 days", value: dueSoon.length, cls: "text-sky" },
-          { label: "Overdue", value: overdue.length, cls: overdue.length ? "text-coral" : "text-mut" },
-          { label: "Events this week", value: weekTotal, cls: "text-mint" },
+          { label: t("dash.openTasks"), value: openTasks.length, cls: "text-amber" },
+          { label: t("dash.dueSoon"), value: dueSoon.length, cls: "text-sky" },
+          { label: t("dash.overdue"), value: overdue.length, cls: overdue.length ? "text-coral" : "text-mut" },
+          { label: t("dash.weekEvents"), value: weekTotal, cls: "text-mint" },
         ].map((s) => (
           <div key={s.label} className="bg-panel px-4 sm:px-5 py-4">
             <p className={`font-display font-bold text-3xl leading-none ${s.cls}`}>{s.value}</p>
@@ -157,20 +157,20 @@ export function Dashboard({
           {/* Floor board */}
           <section className={`${panelCls} reveal`} style={{ animationDelay: "160ms" }}>
             <div className="flex items-center justify-between px-4 sm:px-5 pt-4 pb-1">
-              <h2 className="font-display font-semibold text-lg">Who is where right now</h2>
+              <h2 className="font-display font-semibold text-lg">{t("dash.whoWhere")}</h2>
               <button
                 onClick={() => onNavigate("people")}
                 className="inline-flex items-center gap-1 text-xs text-mut hover:text-mint transition-colors"
               >
-                Full roster <IconChevronRight className="w-3.5 h-3.5" />
+                {t("dash.fullRoster")} <IconChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="px-4 sm:px-5 pb-4">
               {total === 0 && (
                 <EmptyState
                   icon={<IconInbox className="w-5 h-5" />}
-                  title="No one on the roster yet"
-                  body="Add your subordinates in the People section and this board comes alive."
+                  title={t("people.emptyTitle")}
+                  body={t("people.emptyBody")}
                 />
               )}
               {STATUS_ORDER.map((k) => {
@@ -180,23 +180,25 @@ export function Dashboard({
                     key={k}
                     className="flex flex-col sm:flex-row sm:items-start gap-2.5 py-3 border-b border-line last:border-b-0"
                   >
-                    <div className="sm:w-[108px] shrink-0 sm:pt-0.5">
+                    <div className="sm:w-[118px] shrink-0 sm:pt-0.5">
                       <StatusPill status={k} pulse />
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {people.length === 0 && <span className="text-xs text-dim py-1.5">Nobody</span>}
+                      {people.length === 0 && (
+                        <span className="text-xs text-dim py-1.5">{t("dash.nobody")}</span>
+                      )}
                       {people.map(({ p, s }) => (
                         <button
                           key={p.id}
                           onClick={() => onOpenPerson(p.id)}
-                          className="group flex items-center gap-2.5 rounded-lg border border-line2 bg-panel2/70 hover:bg-raise hover:border-line2 hover:-translate-y-0.5 pl-1.5 pr-3 py-1.5 text-left transition-all duration-150"
+                          className="group flex items-center gap-2.5 rounded-lg border border-line2 bg-panel2/70 hover:bg-raise pl-1.5 pr-3 py-1.5 text-left transition-all duration-150 hover:-translate-y-0.5"
                         >
                           <Avatar name={p.name} hue={p.hue} size={26} />
                           <span className="min-w-0">
                             <span className="block text-xs font-semibold leading-tight group-hover:text-ink">
                               {p.name}
                             </span>
-                            <span className="block text-[11px] text-mut leading-tight truncate max-w-[160px]">
+                            <span className="block text-[11px] text-mut leading-tight truncate max-w-[170px]">
                               {k === "available" ? p.role : s.detail}
                             </span>
                           </span>
@@ -212,45 +214,43 @@ export function Dashboard({
           {/* Deadline radar */}
           <section className={`${panelCls} reveal`} style={{ animationDelay: "210ms" }}>
             <div className="flex items-center justify-between px-4 sm:px-5 pt-4 pb-1">
-              <h2 className="font-display font-semibold text-lg">Deadline radar</h2>
+              <h2 className="font-display font-semibold text-lg">{t("dash.radar")}</h2>
               <button
                 onClick={() => onNavigate("tasks")}
                 className="inline-flex items-center gap-1 text-xs text-mut hover:text-mint transition-colors"
               >
-                All tasks <IconChevronRight className="w-3.5 h-3.5" />
+                {t("dash.allTasks")} <IconChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="px-2 sm:px-3 pb-3">
               {radar.length === 0 && (
-                <p className="text-sm text-dim px-3 py-6 text-center">
-                  Nothing open — every task is done or nothing has been assigned.
-                </p>
+                <p className="text-sm text-dim px-3 py-6 text-center">{t("dash.nothingOpen")}</p>
               )}
-              {radar.map((t) => {
-                const due = dueLabel(t.dueDate);
-                const team = state.teams.find((x) => x.id === t.teamId);
+              {radar.map((task) => {
+                const due = dueLabel(task.dueDate);
+                const team = state.teams.find((x) => x.id === task.teamId);
                 const memberIds = [
-                  ...new Set([
-                    ...(team?.memberIds ?? []),
-                    ...t.assigneeIds,
-                  ]),
+                  ...new Set([...(team?.memberIds ?? []), ...task.assigneeIds]),
                 ].filter((id) => state.people.some((p) => p.id === id));
                 return (
                   <button
-                    key={t.id}
+                    key={task.id}
                     onClick={() => onNavigate("tasks")}
                     className="w-full flex items-center gap-3 px-2.5 sm:px-3 py-2.5 rounded-lg hover:bg-panel2/70 text-left transition-colors group"
                   >
-                    <Chip className={`w-[104px] justify-center shrink-0 ${DUE_TONE_CLS[due.tone]}`}>
+                    <Chip className={`w-[108px] justify-center shrink-0 ${DUE_TONE_CLS[due.tone]}`}>
                       {due.text}
                     </Chip>
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-medium truncate group-hover:text-ink">
-                        {t.title}
+                        {task.title}
                       </span>
                       <span className="block text-[11px] text-mut truncate">
-                        {team ? team.name : "No team"} ·{" "}
-                        {t.status === "active" ? "in progress" : "not started"}
+                        {team ? team.name : t("dash.noTeam")} ·{" "}
+                        <span className="font-mono">
+                          {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
+                        </span>{" "}
+                        · {task.status === "active" ? t("dash.inProgress") : t("dash.notStarted")}
                       </span>
                     </span>
                     <span className="flex -space-x-1.5 shrink-0">
@@ -277,19 +277,17 @@ export function Dashboard({
           {/* Week pulse */}
           <section className={`${panelCls} p-4 sm:p-5 reveal`} style={{ animationDelay: "260ms" }}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display font-semibold text-lg">Week pulse</h2>
-              <span className="font-mono text-[11px] text-dim">{weekTotal} logged</span>
+              <h2 className="font-display font-semibold text-lg">{t("dash.pulse")}</h2>
+              <span className="font-mono text-[11px] text-dim">{t("dash.loggedCount", { n: weekTotal })}</span>
             </div>
             <div className="flex items-end gap-2 h-24">
               {week.map((d, i) => (
                 <div key={d.iso} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                  <span
-                    className={`text-[10px] font-mono ${d.count > 0 ? "text-mut" : "text-dim/60"}`}
-                  >
+                  <span className={`text-[10px] font-mono ${d.count > 0 ? "text-mut" : "text-dim/60"}`}>
                     {d.count > 0 ? d.count : "·"}
                   </span>
                   <div
-                    title={`${d.count} event${d.count === 1 ? "" : "s"} on ${d.iso}`}
+                    title={tp("dash.event", d.count, { d: fmtDate(d.iso) })}
                     className={`w-full rounded-sm bar-grow ${
                       d.iso === today ? "bg-mint/80" : d.count > 0 ? "bg-line2" : "bg-line"
                     }`}
@@ -311,11 +309,11 @@ export function Dashboard({
           {/* Recent activity */}
           <section className={`${panelCls} reveal`} style={{ animationDelay: "310ms" }}>
             <h2 className="font-display font-semibold text-lg px-4 sm:px-5 pt-4 pb-1">
-              Latest on the record
+              {t("dash.latest")}
             </h2>
             <div className="pb-2">
               {recent.length === 0 && (
-                <p className="text-sm text-dim px-5 py-6 text-center">No events logged yet.</p>
+                <p className="text-sm text-dim px-5 py-6 text-center">{t("dash.noEvents")}</p>
               )}
               {recent.map(({ e, person }) => {
                 const m = KIND_META[e.kind];
@@ -330,7 +328,7 @@ export function Dashboard({
                       <span className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-semibold">{person!.name}</span>
                         <Chip className={m.chip}>
-                          <m.Icon className="w-3 h-3" /> {m.label}
+                          <m.Icon className="w-3 h-3" /> {t(m.key)}
                         </Chip>
                       </span>
                       <span className="block text-[13px] text-mut truncate mt-0.5">{e.title}</span>

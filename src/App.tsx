@@ -1,41 +1,85 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FC, SVGProps } from "react";
-import type { ViewKey } from "./types";
+import type { AppState, ViewKey } from "./types";
 import { StoreProvider, useStore } from "./store";
-import { ToastProvider, useToast } from "./ui";
+import { ToastProvider, btnIcon, useToast } from "./ui";
+import { I18nProvider, useI18n } from "./i18n";
+import type { Lang } from "./i18n";
 import { seedState } from "./data";
-import { fmtDateFull, todayISO } from "./dates";
+import { fmtDateFull, getLocale, todayISO } from "./dates";
 import { Dashboard } from "./views/Dashboard";
 import { People } from "./views/People";
 import { Profile } from "./views/Profile";
 import { Teams } from "./views/Teams";
 import { Tasks } from "./views/Tasks";
-import { IconCalendar, IconFlag, IconGauge, IconListChecks, IconLogo, IconRefresh, IconUsers } from "./icons";
+import { CalendarView } from "./views/CalendarView";
+import {
+  IconCalendar,
+  IconDownload,
+  IconFlag,
+  IconGauge,
+  IconGlobe,
+  IconListChecks,
+  IconLogo,
+  IconRefresh,
+  IconUpload,
+  IconUsers,
+} from "./icons";
 
-const NAV: { key: ViewKey; label: string; Icon: FC<SVGProps<SVGSVGElement>> }[] = [
-  { key: "dashboard", label: "Today", Icon: IconGauge },
-  { key: "people", label: "People", Icon: IconUsers },
-  { key: "teams", label: "Teams", Icon: IconFlag },
-  { key: "tasks", label: "Tasks", Icon: IconListChecks },
+const NAV: { key: ViewKey; labelKey: string; Icon: FC<SVGProps<SVGSVGElement>> }[] = [
+  { key: "dashboard", labelKey: "nav.today", Icon: IconGauge },
+  { key: "people", labelKey: "nav.people", Icon: IconUsers },
+  { key: "teams", labelKey: "nav.teams", Icon: IconFlag },
+  { key: "tasks", labelKey: "nav.tasks", Icon: IconListChecks },
+  { key: "calendar", labelKey: "nav.calendar", Icon: IconCalendar },
 ];
 
 export default function App() {
   return (
-    <StoreProvider>
-      <ToastProvider>
-        <Shell />
-      </ToastProvider>
-    </StoreProvider>
+    <I18nProvider>
+      <StoreProvider>
+        <ToastProvider>
+          <Shell />
+        </ToastProvider>
+      </StoreProvider>
+    </I18nProvider>
+  );
+}
+
+function LangSwitch() {
+  const { lang, setLang } = useI18n();
+  const { t } = useI18n();
+  return (
+    <div
+      className="inline-flex items-center gap-1 rounded-full border border-line2 bg-panel2 p-0.5"
+      role="group"
+      aria-label={t("lang.label")}
+    >
+      <IconGlobe className="w-3.5 h-3.5 text-dim ml-1.5" />
+      {(["en", "fr"] as Lang[]).map((l) => (
+        <button
+          key={l}
+          onClick={() => setLang(l)}
+          className={`rounded-full px-2 py-0.5 font-mono text-[10.5px] font-semibold uppercase tracking-wide transition-all duration-150 ${
+            lang === l ? "bg-mint text-[#0b130e]" : "text-mut hover:text-ink"
+          }`}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
   );
 }
 
 function Shell() {
   const { state, dispatch } = useStore();
+  const { t } = useI18n();
   const { push } = useToast();
   const [view, setView] = useState<ViewKey>("dashboard");
   const [personId, setPersonId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
   const [armed, setArmed] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const i = window.setInterval(() => setNow(new Date()), 30000);
@@ -44,11 +88,11 @@ function Shell() {
 
   useEffect(() => {
     if (!armed) return;
-    const t = window.setTimeout(() => setArmed(false), 2600);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setArmed(false), 2600);
+    return () => window.clearTimeout(timer);
   }, [armed]);
 
-  const openTasks = state.tasks.filter((t) => t.status !== "done").length;
+  const openTasks = state.tasks.filter((x) => x.status !== "done").length;
   const records = state.people.length + state.teams.length + state.tasks.length + state.events.length;
 
   const navigate = (v: ViewKey) => {
@@ -61,18 +105,55 @@ function Shell() {
     people: state.people.length,
     teams: state.teams.length,
     tasks: openTasks,
+    calendar: null,
   };
 
   const crumb = personId
-    ? "Person record"
+    ? t("crumb.record")
     : view === "dashboard"
-    ? "Morning rollcall"
-    : NAV.find((n) => n.key === view)!.label;
+    ? t("crumb.rollcall")
+    : t(NAV.find((n) => n.key === view)!.labelKey);
 
   const doReset = () => {
     dispatch({ type: "RESET", state: seedState() });
     setArmed(false);
-    push("Demo data restored to a fresh state");
+    push(t("data.resetDone"));
+  };
+
+  const doExport = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `rollcall-backup-${todayISO()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    push(t("data.exported"));
+  };
+
+  const onImportFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result)) as AppState;
+        if (
+          !parsed ||
+          !Array.isArray(parsed.people) ||
+          !Array.isArray(parsed.teams) ||
+          !Array.isArray(parsed.tasks) ||
+          !Array.isArray(parsed.events)
+        ) {
+          throw new Error("invalid");
+        }
+        dispatch({ type: "RESET", state: parsed });
+        const n =
+          parsed.people.length + parsed.teams.length + parsed.tasks.length + parsed.events.length;
+        push(t("data.imported", { n }));
+      } catch {
+        push(t("data.importError"), "warn");
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -91,8 +172,10 @@ function Shell() {
             <IconLogo className="w-[18px] h-[18px]" />
           </span>
           <div className="hidden md:block min-w-0">
-            <p className="font-display font-bold text-[17px] leading-none tracking-tight">Rollcall</p>
-            <p className="font-mono text-[9.5px] text-dim mt-1 uppercase tracking-[0.22em]">Office ledger</p>
+            <p className="font-display font-bold text-[17px] leading-none tracking-tight">{t("app.name")}</p>
+            <p className="font-mono text-[9.5px] text-dim mt-1 uppercase tracking-[0.22em]">
+              {t("app.tagline")}
+            </p>
           </div>
         </div>
 
@@ -111,7 +194,7 @@ function Shell() {
                   <span className="absolute left-[-8px] md:left-[-12px] top-1/2 -translate-y-1/2 w-1 h-5 rounded-r bg-mint" />
                 )}
                 <n.Icon className={`w-[18px] h-[18px] shrink-0 mx-auto md:mx-0 ${active ? "text-mint" : ""}`} />
-                <span className="hidden md:inline flex-1 text-left font-medium">{n.label}</span>
+                <span className="hidden md:inline flex-1 text-left font-medium">{t(n.labelKey)}</span>
                 {counts[n.key] !== null && (
                   <span className="hidden md:inline font-mono text-[10px] text-dim">{counts[n.key]}</span>
                 )}
@@ -120,21 +203,56 @@ function Shell() {
           })}
         </nav>
 
-        <div className="border-t border-line p-2 md:p-3 space-y-2 shrink-0">
-          <button
-            onClick={() => (armed ? doReset() : setArmed(true))}
-            className={`w-full flex items-center gap-2.5 rounded-lg border px-2.5 py-2 text-xs font-medium transition-all duration-150 ${
-              armed
-                ? "border-coral/50 bg-coral/10 text-coral"
-                : "border-line2 text-dim hover:text-mut hover:bg-panel2"
-            }`}
-          >
-            <IconRefresh className="w-3.5 h-3.5 shrink-0 mx-auto md:mx-0" />
-            <span className="hidden md:inline">{armed ? "Confirm reset?" : "Reset demo data"}</span>
-          </button>
-          <p className="hidden md:flex items-center gap-2 px-1.5 font-mono text-[9.5px] text-dim">
+        <div className="border-t border-line p-2 md:p-3 space-y-1.5 shrink-0">
+          <p className="hidden md:block px-1.5 pb-0.5 text-[9.5px] font-mono uppercase tracking-[0.2em] text-dim">
+            {t("data.title")}
+          </p>
+          <div className="grid grid-cols-3 md:grid-cols-2 gap-1.5">
+            <button
+              className={`${btnIcon} w-full h-8`}
+              title={t("data.export")}
+              aria-label={t("data.export")}
+              onClick={doExport}
+            >
+              <IconDownload className="w-4 h-4" />
+            </button>
+            <button
+              className={`${btnIcon} w-full h-8`}
+              title={t("data.import")}
+              aria-label={t("data.import")}
+              onClick={() => fileRef.current?.click()}
+            >
+              <IconUpload className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => (armed ? doReset() : setArmed(true))}
+              title={t("data.reset")}
+              className={`col-span-1 md:col-span-2 inline-flex items-center justify-center gap-2 rounded-lg border h-8 px-2 text-[11px] font-semibold transition-all duration-150 ${
+                armed
+                  ? "border-coral/50 bg-coral/10 text-coral"
+                  : "border-line2 text-mut hover:text-ink hover:bg-panel2"
+              }`}
+            >
+              <IconRefresh className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden md:inline truncate">
+                {armed ? t("data.resetConfirm") : t("data.reset")}
+              </span>
+            </button>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onImportFile(f);
+              e.target.value = "";
+            }}
+          />
+          <p className="hidden md:flex items-center gap-2 px-1.5 pt-1 font-mono text-[9.5px] text-dim">
             <span className="w-1.5 h-1.5 rounded-full bg-mint pulse-dot shrink-0" />
-            Saved locally · {records} records
+            {t("data.saved", { n: records })}
           </p>
         </div>
       </aside>
@@ -144,19 +262,20 @@ function Shell() {
         <header className="sticky top-0 z-20 h-14 shrink-0 border-b border-line bg-bg/85 backdrop-blur-sm flex items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-2 min-w-0">
             <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-dim hidden sm:inline">
-              Office ledger
+              {t("app.tagline")}
             </span>
             <span className="text-dim hidden sm:inline">/</span>
             <span className="text-sm font-semibold truncate">{crumb}</span>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <span className="hidden sm:inline-flex items-center gap-2 font-mono text-[11px] text-mut border border-line2 rounded-full px-3 py-1">
+            <span className="hidden lg:inline-flex items-center gap-2 font-mono text-[11px] text-mut border border-line2 rounded-full px-3 py-1">
               <IconCalendar className="w-3.5 h-3.5 text-dim" />
               {fmtDateFull(todayISO())}
             </span>
-            <span className="font-mono text-sm font-semibold text-mint tabular-nums">
-              {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            <span className="hidden sm:inline font-mono text-sm font-semibold text-mint tabular-nums">
+              {now.toLocaleTimeString(getLocale(), { hour: "2-digit", minute: "2-digit" })}
             </span>
+            <LangSwitch />
           </div>
         </header>
 
@@ -170,6 +289,8 @@ function Shell() {
               <People onOpenPerson={setPersonId} />
             ) : view === "teams" ? (
               <Teams />
+            ) : view === "calendar" ? (
+              <CalendarView onOpenPerson={setPersonId} onNavigate={navigate} />
             ) : (
               <Tasks />
             )}
