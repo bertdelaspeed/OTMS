@@ -3,9 +3,9 @@ import type { Person, StatusKey } from "../types";
 import { activeTasksFor, personLastEvent, personStatus, teamsOf, useStore } from "../store";
 import { STATUS_META, STATUS_ORDER, TEAM_COLORS, KIND_META } from "../meta";
 import { fmtDate } from "../dates";
-import { Avatar, Chip, DangerAction, EmptyState, StatusPill, TextInput, btnIcon, btnPrimary, panelCls, useToast } from "../ui";
-import { IconBriefcase, IconChevronRight, IconPencil, IconSearch, IconUserPlus, IconUsers } from "../icons";
-import { PersonModal } from "../modals";
+import { Avatar, Chip, DangerAction, EmptyState, StatusPill, TextInput, btnGhost, btnIcon, btnPrimary, panelCls, useToast } from "../ui";
+import { IconBriefcase, IconChevronRight, IconPencil, IconSearch, IconUpload, IconUserPlus, IconUsers } from "../icons";
+import { ImportExcelModal, PersonModal } from "../modals";
 import { useI18n } from "../i18n";
 
 type Filter = StatusKey | "all";
@@ -17,6 +17,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [modal, setModal] = useState<{ person: Person | null } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const rows = useMemo(
     () =>
@@ -55,9 +56,14 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
           <h1 className="font-display font-bold text-4xl tracking-tight leading-none">{t("people.title")}</h1>
           <p className="text-mut text-sm mt-2">{tp("people.sub", state.people.length)}</p>
         </div>
-        <button className={btnPrimary} onClick={() => setModal({ person: null })}>
-          <IconUserPlus className="w-4 h-4" /> {t("people.add")}
-        </button>
+        <div className="flex items-center gap-2">
+          <button className={btnGhost} onClick={() => setImportOpen(true)}>
+            <IconUpload className="w-4 h-4" /> {t("people.import")}
+          </button>
+          <button className={btnPrimary} onClick={() => setModal({ person: null })}>
+            <IconUserPlus className="w-4 h-4" /> {t("people.add")}
+          </button>
+        </div>
       </header>
 
       {/* Toolbar */}
@@ -190,6 +196,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
       )}
 
       <PersonModal open={modal !== null} person={modal?.person ?? null} onClose={() => setModal(null)} />
+      <ImportExcelModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }

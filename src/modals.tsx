@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { EventKind, Person, Task, TaskStatus, Team, TeamColor } from "./types";
 import { involvedIds, makeEvent, useStore } from "./store";
 import { uid } from "./data";
@@ -7,7 +7,9 @@ import { KIND_META, KIND_ORDER, TASK_STATUS_KEY, TEAM_COLORS, TEAM_COLOR_KEYS } 
 import { Field, Modal, Select, TextArea, TextInput, btnGhost, btnPrimary, useToast } from "./ui";
 import { useI18n } from "./i18n";
 import { Avatar, Chip } from "./ui";
-import { IconCheck, IconSearch } from "./icons";
+import { IconCheck, IconDownload, IconSearch, IconSheet, IconUpload } from "./icons";
+import { downloadPeopleTemplate, parsePeopleExcel } from "./exports";
+import type { ImportWarning, ParsedRow } from "./exports";
 
 const HUES = [16, 40, 70, 96, 130, 158, 188, 210, 232, 258, 288, 316, 340];
 
@@ -616,6 +618,297 @@ export function EventModal({
         <Field label={`${t("mev.note")} · ${t("common.optional")}`}>
           <TextArea rows={3} value={note} placeholder={t("mev.notePh")} onChange={(e) => setNote(e.target.value)} />
         </Field>
+      </div>
+    </Modal>
+  );
+}
+
+/* ================= Excel import ================= */
+
+export function ImportExcelModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { state, dispatch } = useStore();
+  const { t, tp } = useI18n();
+  const { push } = useToast();
+
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [rows, setRows] = useState<ParsedRow[] | null>(null);
+  const [fileWarnings, setFileWarnings] = useState<ImportWarning[]>([]);
+  const [mode, setMode] = useState<"add" | "replace">("add");
+  const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setFileName(null);
+      setParsing(false);
+      setRows(null);
+      setFileWarnings([]);
+      setMode("add");
+      setDragOver(false);
+      setError("");
+    }
+  }, [open]);
+
+  const handleFile = async (file: File) => {
+    setParsing(true);
+    setError("");
+    setRows(null);
+    setFileName(file.name);
+    try {
+      const res = await parsePeopleExcel(file);
+      if (res.rows.length === 0) setError(t("import.empty"));
+      setRows(res.rows);
+      setFileWarnings(res.warnings);
+    } catch {
+      setError(t("import.badFile"));
+      setFileName(null);
+    }
+    setParsing(false);
+  };
+
+  const existingNames = useMemo(
+    () => new Set(state.people.map((p) => p.name.toLowerCase())),
+    [state.people]
+  );
+  const teamNamesLower = useMemo(
+    () => new Set(state.teams.map((tm) => tm.name.toLowerCase())),
+    [state.teams]
+  );
+
+  const unknownTeamWarnings: ImportWarning[] = useMemo(
+    () =>
+      (rows ?? []).flatMap((r) =>
+        r.teamNames
+          .filter((n) => !teamNamesLower.has(n.toLowerCase()))
+          .map((team) => ({ kind: "unknownTeam" as const, row: r.sheetRow, team }))
+      ),
+    [rows, teamNamesLower]
+  );
+
+  const allWarnings = [...fileWarnings, ...unknownTeamWarnings];
+  const skippedDupes = (rows ?? []).filter(
+    (r) => mode === "add" && existingNames.has(r.name.toLowerCase())
+  ).length;
+  const importable = (rows ?? []).filter(
+    (r) => !(mode === "add" && existingNames.has(r.name.toLowerCase()))
+  );
+
+  const run = () => {
+    if (importable.length === 0) return;
+    if (mode === "replace") {
+      state.people.forEach((p) => dispatch({ type: "REMOVE_PERSON", id: p.id }));
+    }
+    let i = 0;
+    importable.forEach((r) => {
+      const teamIds = r.teamNames
+        .map((n) => state.teams.find((tm) => tm.name.toLowerCase() === n.toLowerCase())?.id)
+        .filter((x): x is string => !!x);
+      dispatch({
+        type: "ADD_PERSON",
+        person: {
+          id: uid(),
+          name: r.name,
+          role: r.role,
+          email: r.email,
+          phone: r.phone,
+          joinedAt: r.joinedAt ?? todayISO(),
+          hue: HUES[i % HUES.length],
+        },
+        teamIds,
+      });
+      i += 1;
+    });
+    const msg =
+      tp("import.done", importable.length) +
+      (skippedDupes > 0 ? ` · ${tp("import.duplicates", skippedDupes)}` : "");
+    push(msg, skippedDupes > 0 ? "warn" : "ok");
+    onClose();
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      wide
+      title={t("import.title")}
+      subtitle={t("import.sub")}
+      footer={
+        <>
+          <button className={btnGhost} onClick={onClose}>
+            {t("common.cancel")}
+          </button>
+          <button className={btnPrimary} onClick={run} disabled={importable.length === 0}>
+            <IconUpload className="w-4 h-4" /> {tp("import.run", importable.length)}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {/* template */}
+        <div className="flex items-center gap-3 rounded-xl border border-dashed border-line2 bg-panel2/50 px-4 py-3">
+          <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-mint/10 border border-mint/30 text-mint shrink-0">
+            <IconSheet className="w-4.5 h-4.5" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">{t("import.template")}</p>
+            <p className="text-[11px] text-mut">{t("import.templateHint")}</p>
+          </div>
+          <button
+            className={btnGhost}
+            onClick={() => {
+              void downloadPeopleTemplate().then(() => push(t("data.exported")));
+            }}
+          >
+            <IconDownload className="w-4 h-4" /> .xlsx
+          </button>
+        </div>
+
+        {/* dropzone */}
+        <label
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            const f = e.dataTransfer.files?.[0];
+            if (f) void handleFile(f);
+          }}
+          className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 cursor-pointer transition-all duration-200 ${
+            dragOver
+              ? "border-mint/70 bg-mint/[0.07] scale-[1.01]"
+              : "border-line2 bg-panel2/40 hover:border-mint/40 hover:bg-panel2/70"
+          }`}
+        >
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleFile(f);
+              e.target.value = "";
+            }}
+          />
+          <IconUpload className={`w-6 h-6 ${dragOver ? "text-mint" : "text-dim"}`} />
+          <p className="text-sm font-medium">{t("import.drop")}</p>
+          <p className="text-xs text-dim">
+            {t("import.or")} <span className="text-mint font-medium">{t("import.browse")}</span>
+          </p>
+          {parsing && <p className="text-xs font-mono text-mut">{t("import.parsing")}</p>}
+          {fileName && !parsing && (
+            <p className="text-xs font-mono text-mut truncate max-w-full">{fileName}</p>
+          )}
+        </label>
+
+        {error && (
+          <p className="text-xs text-coral bg-coral/10 border border-coral/30 rounded-lg px-3 py-2">{error}</p>
+        )}
+
+        {/* mode */}
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mut mb-1.5">
+            {t("import.mode")}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { key: "add", label: t("import.modeAdd") },
+                { key: "replace", label: t("import.modeReplace") },
+              ] as const
+            ).map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setMode(m.key)}
+                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-all duration-150 ${
+                  mode === m.key
+                    ? m.key === "replace"
+                      ? "border-coral/50 bg-coral/10 text-coral"
+                      : "border-mint/50 bg-mint/10 text-mint"
+                    : "border-line text-mut hover:border-line2 hover:text-ink"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          {mode === "replace" && (
+            <p className="text-[11px] text-coral mt-1.5">{t("import.replaceWarn")}</p>
+          )}
+        </div>
+
+        {/* preview */}
+        {rows !== null && rows.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-mut">
+                {tp("import.ready", importable.length)}
+              </p>
+              {skippedDupes > 0 && (
+                <Chip className="text-amber bg-amber/10 border-amber/30">
+                  {tp("import.duplicates", skippedDupes)}
+                </Chip>
+              )}
+            </div>
+            <div className="max-h-44 overflow-y-auto rounded-lg border border-line divide-y divide-line">
+              {rows.slice(0, 40).map((r, i) => {
+                const dupe = mode === "add" && existingNames.has(r.name.toLowerCase());
+                return (
+                  <div
+                    key={`${r.name}-${i}`}
+                    className={`flex items-center gap-2.5 px-3 py-2 text-xs ${dupe ? "opacity-45" : ""}`}
+                  >
+                    <Avatar name={r.name} hue={HUES[i % HUES.length]} size={24} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-medium truncate">
+                        {r.name}
+                        {dupe && <span className="text-dim font-normal"> · {t("import.modeAdd")}</span>}
+                      </span>
+                      <span className="block text-[11px] text-mut truncate">
+                        {[r.role, r.email].filter(Boolean).join(" · ") || "—"}
+                      </span>
+                    </span>
+                    {r.teamNames.length > 0 && (
+                      <span className="font-mono text-[10px] text-dim truncate max-w-[110px]">
+                        {r.teamNames.join("; ")}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* warnings */}
+        {allWarnings.length > 0 && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-amber mb-1.5">
+              {t("import.notes")} · {allWarnings.length}
+            </p>
+            <ul className="space-y-1 max-h-28 overflow-y-auto">
+              {allWarnings.map((w, i) => {
+                const text =
+                  w.kind === "noName"
+                    ? t("import.noName", { n: w.row })
+                    : w.kind === "badDate"
+                    ? t("import.badDate", { n: w.row })
+                    : w.kind === "dupInFile"
+                    ? t("import.dupInFile", { n: w.row, name: w.name })
+                    : t("import.unknownTeam", { n: w.row, team: w.team });
+                return (
+                  <li key={i} className="text-[11px] text-amber/90 bg-amber/[0.06] border border-amber/20 rounded-md px-2.5 py-1.5">
+                    {text}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </Modal>
   );

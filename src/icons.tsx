@@ -225,6 +225,40 @@ export const IconRefresh = (p: P) => (
   </svg>
 );
 
+export const IconDownload = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M7 10l5 5 5-5" />
+    <path d="M12 15V3" />
+  </svg>
+);
+
+export const IconUpload = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <path d="M17 8l-5-5-5 5" />
+    <path d="M12 3v12" />
+  </svg>
+);
+
+export const IconSheet = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+    <path d="M3 15h18" />
+    <path d="M9 3v18" />
+  </svg>
+);
+
+export const IconFileText = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+    <path d="M14 2v6h6" />
+    <path d="M8 13h8" />
+    <path d="M8 17h8" />
+  </svg>
+);
+
 export const IconChevronLeft = (p: P) => (
   <svg {...base} strokeWidth={2} {...p}>
     <path d="M15 6l-6 6 6 6" />
@@ -235,22 +269,6 @@ export const IconArrowRight = (p: P) => (
   <svg {...base} strokeWidth={2} {...p}>
     <path d="M5 12h14" />
     <path d="M13 6l6 6-6 6" />
-  </svg>
-);
-
-export const IconDownload = (p: P) => (
-  <svg {...base} {...p}>
-    <path d="M12 3v12" />
-    <path d="M7 10l5 5 5-5" />
-    <path d="M4 21h16" />
-  </svg>
-);
-
-export const IconUpload = (p: P) => (
-  <svg {...base} {...p}>
-    <path d="M12 15V3" />
-    <path d="M7 8l5-5 5 5" />
-    <path d="M4 21h16" />
   </svg>
 );
 

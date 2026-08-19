@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import type { EventKind } from "../types";
 import { personStatus, tasksFor, teamsOf, useStore } from "../store";
-import { KIND_META } from "../meta";
-import { daysBetween, dueLabel, fmtDate, fmtDateYear, relTime, spanDays, todayISO } from "../dates";
+import { KIND_META, STATUS_META } from "../meta";
+import { exportPersonPdf } from "../exports";
+import { daysBetween, dueLabel, fmtDate, fmtDateFull, fmtDateYear, relTime, spanDays, todayISO } from "../dates";
 import {
   Avatar,
   Chip,
@@ -18,6 +19,7 @@ import {
   IconArrowLeft,
   IconBriefcase,
   IconCalendar,
+  IconFileText,
   IconMail,
   IconPencil,
   IconPhone,
@@ -98,6 +100,54 @@ export function Profile({
     onDeleted();
   };
 
+  const downloadPdf = () => {
+    void exportPersonPdf({
+      person,
+      status: status.key,
+      statusLabel: t(STATUS_META[status.key].key),
+      teamNames: teams.map((tm) => tm.name),
+      joinedText: fmtDateYear(person.joinedAt),
+      tenureText: tp("profile.tenure", tenure),
+      summary: kindStats.map((s) => ({
+        label: t(`profile.k.${s.k}`),
+        entries: s.n,
+        days: s.ranged ? s.days : null,
+      })),
+      events: [...events].reverse().map((e) => ({
+        date: e.endDate ? `${fmtDate(e.date)} → ${fmtDate(e.endDate)}` : fmtDate(e.date),
+        kind: e.kind,
+        typeLabel: t(KIND_META[e.kind].key),
+        title: e.title,
+        note: e.note,
+      })),
+      labels: {
+        brand: t("app.name"),
+        title: t("pdf.title"),
+        generated: fmtDateFull(todayISO()),
+        contact: t("pdf.contact"),
+        position: t("pdf.position"),
+        history: t("pdf.history"),
+        role: t("pdf.role"),
+        teams: t("pdf.teams"),
+        joined: t("profile.joined"),
+        tenure: t("profile.tenure", { n: tenure }),
+        email: t("mp.email"),
+        phone: t("mp.phone"),
+        none: t("pdf.none"),
+        summary: t("pdf.summary"),
+        events: t("pdf.events"),
+        category: t("pdf.category"),
+        entries: t("pdf.entries"),
+        days: t("pdf.days"),
+        date: t("pdf.date"),
+        type: t("pdf.type"),
+        description: t("pdf.description"),
+        note: t("pdf.note"),
+        page: (a, b) => t("pdf.page", { a, b }),
+      },
+    }).then(() => push(t("profile.pdfSaved")));
+  };
+
   const statusHint =
     status.key === "available"
       ? t("profile.hintFree")
@@ -159,6 +209,9 @@ export function Profile({
             </button>
             <button className={btnGhost} onClick={() => setEditOpen(true)}>
               <IconPencil className="w-4 h-4" /> {t("profile.edit")}
+            </button>
+            <button className={btnGhost} onClick={downloadPdf}>
+              <IconFileText className="w-4 h-4" /> {t("profile.pdf")}
             </button>
             <DangerAction onConfirm={removePerson} label={t("profile.remove", { name: person.name })} />
           </div>

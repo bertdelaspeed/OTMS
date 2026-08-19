@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import type { AppState, PersonEvent, Task } from "../types";
-import { useStore } from "../store";
-import { KIND_META, RANGE_KINDS, TEAM_COLORS } from "../meta";
+import { involvedIds, personStatus, useStore } from "../store";
+import { KIND_META, RANGE_KINDS, STATUS_META, TEAM_COLORS } from "../meta";
 import {
   addDays,
   addMonthsISO,
   dayNum,
+  dueLabel,
   fmtDate,
   fmtDateFull,
   monthGridISO,
@@ -87,6 +88,24 @@ export function CalendarView({
     return get;
   }, [state]);
 
+  /* tasks covering today + who is out today (always visible strip) */
+  const todayTasks = useMemo(() => {
+    const rank = (t: Task) => (t.status === "active" ? 0 : 1);
+    return state.tasks
+      .filter((t) => t.status !== "done" && t.startDate <= today && today <= t.dueDate)
+      .sort((a, b) => rank(a) - rank(b) || a.dueDate.localeCompare(b.dueDate));
+  }, [state.tasks, today]);
+
+  const outToday = useMemo(() => {
+    const c: Record<"absent" | "sick" | "leave", number> = { absent: 0, sick: 0, leave: 0 };
+    state.people.forEach((p) => {
+      const k = personStatus(state, p.id).key;
+      if (k === "absent" || k === "sick" || k === "leave") c[k] += 1;
+    });
+    return c;
+  }, [state]);
+  const outTotal = outToday.absent + outToday.sick + outToday.leave;
+
   const navigate = (dir: -1 | 1) => {
     if (mode === "week") setCursor(addDays(cursor, dir * 7));
     else if (mode === "month") setCursor(addMonthsISO(cursor, dir));
@@ -149,6 +168,117 @@ export function CalendarView({
       <p className="reveal font-display font-semibold text-xl -mb-1" style={{ animationDelay: "50ms" }}>
         {periodLabel}
       </p>
+
+      {/* -------- today strip (always on top of week/month/year) -------- */}
+      <section className={`${panelCls} reveal overflow-hidden`} style={{ animationDelay: "70ms" }}>
+        <div className="flex flex-col lg:flex-row">
+          <div className="flex items-center gap-4 px-5 py-4 lg:w-[210px] lg:shrink-0 lg:border-r border-b lg:border-b-0 border-line">
+            <span className="font-display font-bold text-[46px] leading-none text-mint tabular-nums">
+              {dayNum(today)}
+            </span>
+            <span className="min-w-0">
+              <span className="block font-display font-semibold text-[13px] leading-snug">
+                {fmtDateFull(today)}
+              </span>
+              <span className="block font-mono text-[9.5px] text-dim mt-1 uppercase tracking-[0.18em]">
+                {t("cal.weekN", { n: weekNumber(today) })}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex-1 min-w-0 px-4 py-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut">
+                {t("cal.todaySchedule")}
+              </p>
+              {outTotal > 0 && (
+                <span className="flex flex-wrap items-center gap-1.5">
+                  {(["absent", "sick", "leave"] as const)
+                    .filter((k) => outToday[k] > 0)
+                    .map((k) => (
+                      <Chip key={k} className={STATUS_META[k].chip}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[k].dot}`} />
+                        {outToday[k]} {t(STATUS_META[k].key)}
+                      </Chip>
+                    ))}
+                </span>
+              )}
+            </div>
+
+            {todayTasks.length === 0 ? (
+              <p className="text-sm text-dim px-1 pb-1.5">{t("cal.todayEmpty")}</p>
+            ) : (
+              <div className="flex gap-2.5 overflow-x-auto pb-1.5">
+                {todayTasks.map((task) => {
+                  const team = state.teams.find((x) => x.id === task.teamId);
+                  const color = team ? TEAM_COLORS[team.color] : null;
+                  const ids = involvedIds(state, task);
+                  const due = dueLabel(task.dueDate);
+                  const dueToneCls =
+                    due.tone === "late"
+                      ? "text-coral"
+                      : due.tone === "today"
+                      ? "text-amber"
+                      : due.tone === "soon"
+                      ? "text-sky"
+                      : "text-mut";
+                  return (
+                    <div
+                      key={task.id}
+                      className="min-w-[250px] max-w-[300px] shrink-0 rounded-lg border border-line2 bg-panel2/60 overflow-hidden hover:-translate-y-0.5 hover:bg-panel2 transition-all duration-150"
+                    >
+                      <div className={`h-1 ${color?.bar ?? "bg-line2"}`} />
+                      <div className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[13px] font-semibold truncate">{task.title}</p>
+                          <Chip
+                            className={
+                              task.status === "active"
+                                ? "text-amber bg-amber/10 border-amber/30"
+                                : "text-sky bg-sky/10 border-sky/30"
+                            }
+                          >
+                            {task.status === "active" ? t("taskStatus.active") : t("cal.plannedToday")}
+                          </Chip>
+                        </div>
+                        <p className="text-[11px] text-mut mt-1 truncate">
+                          {team?.name ?? t("tasks.noTeam")} ·{" "}
+                          <span className={`font-medium ${dueToneCls}`}>{due.text}</span>
+                        </p>
+                        <div className="flex items-center -space-x-1.5 mt-2.5">
+                          {ids.slice(0, 5).map((id) => {
+                            const p = state.people.find((x) => x.id === id);
+                            return p ? (
+                              <button
+                                key={id}
+                                onClick={() => onOpenPerson(id)}
+                                title={p.name}
+                                className="rounded-full"
+                              >
+                                <Avatar
+                                  name={p.name}
+                                  hue={p.hue}
+                                  size={22}
+                                  className="ring-2 ring-panel hover:scale-110 transition-transform"
+                                />
+                              </button>
+                            ) : null;
+                          })}
+                          {ids.length > 5 && (
+                            <span className="w-[22px] h-[22px] rounded-full bg-panel2 border border-line2 inline-flex items-center justify-center text-[9px] font-mono text-mut ring-2 ring-panel">
+                              +{ids.length - 5}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       <div className="grid lg:grid-cols-[1fr_330px] gap-4 items-start">
         {/* -------- calendar grid -------- */}
