@@ -131,6 +131,29 @@ export function sameMonthISO(a: string, b: string): boolean {
   return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth();
 }
 
+export function monthStartISO(iso: string): string {
+  const { year, month0 } = monthOfISO(iso);
+  return firstOfMonthISO(year, month0);
+}
+
+export function monthEndISO(iso: string): string {
+  const { year, month0 } = monthOfISO(iso);
+  return toISO(new Date(year, month0 + 1, 0));
+}
+
+/** Days of [eStart..eEnd] that fall inside [rStart..rEnd] (0 if none). */
+export function overlapDays(
+  eStart: string,
+  eEnd: string | null,
+  rStart: string,
+  rEnd: string
+): number {
+  const s = eStart > rStart ? eStart : rStart;
+  const rawEnd = eEnd ?? eStart;
+  const e = rawEnd < rEnd ? rawEnd : rEnd;
+  return e >= s ? daysBetween(s, e) + 1 : 0;
+}
+
 export function relTime(isoDateTime: string): string {
   const diff = Date.now() - new Date(isoDateTime).getTime();
   const m = Math.floor(diff / 60000);

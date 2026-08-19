@@ -13,7 +13,9 @@ import { Profile } from "./views/Profile";
 import { Teams } from "./views/Teams";
 import { Tasks } from "./views/Tasks";
 import { CalendarView } from "./views/CalendarView";
+import { Activity } from "./views/Activity";
 import {
+  IconActivity,
   IconCalendar,
   IconDownload,
   IconFlag,
@@ -32,6 +34,7 @@ const NAV: { key: ViewKey; labelKey: string; Icon: FC<SVGProps<SVGSVGElement>> }
   { key: "teams", labelKey: "nav.teams", Icon: IconFlag },
   { key: "tasks", labelKey: "nav.tasks", Icon: IconListChecks },
   { key: "calendar", labelKey: "nav.calendar", Icon: IconCalendar },
+  { key: "activity", labelKey: "nav.activity", Icon: IconActivity },
 ];
 
 export default function App() {
@@ -106,6 +109,7 @@ function Shell() {
     teams: state.teams.length,
     tasks: openTasks,
     calendar: null,
+    activity: null,
   };
 
   const crumb = personId
@@ -291,6 +295,8 @@ function Shell() {
               <Teams />
             ) : view === "calendar" ? (
               <CalendarView onOpenPerson={setPersonId} onNavigate={navigate} />
+            ) : view === "activity" ? (
+              <Activity onOpenPerson={setPersonId} />
             ) : (
               <Tasks />
             )}

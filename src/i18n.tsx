@@ -336,6 +336,44 @@ const en: Record<string, string> = {
   "pdf.teams": "Teams",
   "pdf.role": "Role",
   "pdf.none": "None",
+
+  /* nav */
+  "nav.activity": "Activity",
+
+  /* dashboard — today's plan */
+  "dash.plan": "Today’s plan",
+  "dash.planSub": "What the day holds, at a glance.",
+  "dash.seeCalendar": "Open calendar",
+  "dash.running": "Tasks running",
+  "dash.runningEmpty": "No task covers today — the floor is clear.",
+  "dash.out": "Out today",
+  "dash.outEmpty": "Everyone is in.",
+  "dash.until": "until {d}",
+  "dash.loggedToday": "Logged today",
+  "dash.loggedEmpty": "Nothing logged yet today.",
+  "dash.noReason": "No reason given",
+
+  /* activity journal */
+  "act.title": "Activity journal",
+  "act.sub": "Every task, event and movement across the office — week by week, month by month.",
+  "act.events": "Events logged",
+  "act.completed": "Tasks completed",
+  "act.assigned": "Tasks assigned",
+  "act.daysOut": "Days out",
+  "act.daysOutMix": "{a} absent · {s} sick · {l} leave",
+  "act.mix": "Record mix",
+  "act.dayByDay": "Day by day",
+  "act.byPerson": "By person",
+  "act.taskMove": "Task movement",
+  "act.doneIn": "Completed in this period",
+  "act.assignedIn": "Assigned in this period",
+  "act.noneDone": "No task was completed in this period.",
+  "act.noneAssigned": "No task was assigned in this period.",
+  "act.emptyTitle": "A quiet period",
+  "act.emptyBody": "Nothing was logged and no task moved during this period. Pick another week or month.",
+  "act.noOne": "No individual activity in this period.",
+  "act.entry_one": "{n} entry",
+  "act.entry_many": "{n} entries",
 };
 
 const fr: Record<string, string> = {
@@ -672,6 +710,44 @@ const fr: Record<string, string> = {
   "pdf.teams": "Équipes",
   "pdf.role": "Fonction",
   "pdf.none": "Aucune",
+
+  /* nav */
+  "nav.activity": "Activité",
+
+  /* dashboard — today's plan */
+  "dash.plan": "Planning du jour",
+  "dash.planSub": "La journée en un coup d’œil.",
+  "dash.seeCalendar": "Ouvrir le calendrier",
+  "dash.running": "Tâches en cours",
+  "dash.runningEmpty": "Aucune tâche ne couvre aujourd’hui — plateau libre.",
+  "dash.out": "Absents du jour",
+  "dash.outEmpty": "Tout le monde est présent.",
+  "dash.until": "jusqu’au {d}",
+  "dash.loggedToday": "Consigné aujourd’hui",
+  "dash.loggedEmpty": "Rien de consigné aujourd’hui pour l’instant.",
+  "dash.noReason": "Sans motif",
+
+  /* activity journal */
+  "act.title": "Journal d’activité",
+  "act.sub": "Chaque tâche, événement et mouvement du bureau — semaine par semaine, mois par mois.",
+  "act.events": "Événements consignés",
+  "act.completed": "Tâches terminées",
+  "act.assigned": "Tâches affectées",
+  "act.daysOut": "Jours d’absence",
+  "act.daysOutMix": "{a} absence · {s} maladie · {l} congé",
+  "act.mix": "Nature du registre",
+  "act.dayByDay": "Jour par jour",
+  "act.byPerson": "Par personne",
+  "act.taskMove": "Mouvement des tâches",
+  "act.doneIn": "Terminées sur la période",
+  "act.assignedIn": "Affectées sur la période",
+  "act.noneDone": "Aucune tâche terminée sur cette période.",
+  "act.noneAssigned": "Aucune tâche affectée sur cette période.",
+  "act.emptyTitle": "Période calme",
+  "act.emptyBody": "Rien de consigné et aucune tâche n’a bougé sur cette période. Choisissez une autre semaine ou un autre mois.",
+  "act.noOne": "Aucune activité individuelle sur cette période.",
+  "act.entry_one": "{n} entrée",
+  "act.entry_many": "{n} entrées",
 };
 
 const MESSAGES: Record<Lang, Record<string, string>> = { en, fr };

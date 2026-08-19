@@ -12,7 +12,7 @@ import {
   weekdayLetter,
 } from "../dates";
 import { Avatar, Chip, EmptyState, StatusPill, panelCls } from "../ui";
-import { IconChevronRight, IconInbox } from "../icons";
+import { IconCalendar, IconCheck, IconChevronRight, IconInbox } from "../icons";
 import { useI18n } from "../i18n";
 import type { ViewKey } from "../types";
 
@@ -75,6 +75,46 @@ export function Dashboard({
 
   const radar = [...openTasks].sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 6);
   const total = state.people.length;
+
+  /* -------- today's plan -------- */
+  const runningToday = useMemo(
+    () =>
+      state.tasks
+        .filter((x) => x.status !== "done" && x.startDate <= today && today <= x.dueDate)
+        .sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || a.dueDate.localeCompare(b.dueDate)),
+    [state.tasks, today]
+  );
+
+  const outToday = useMemo(
+    () =>
+      roster
+        .filter((r) => r.s.key === "absent" || r.s.key === "sick" || r.s.key === "leave")
+        .map((r) => {
+          const kindOf = { absent: "absence", sick: "sick", leave: "leave" } as const;
+          const ev = state.events
+            .filter(
+              (e) =>
+                e.personId === r.p.id &&
+                e.kind === kindOf[r.s.key as "absent" | "sick" | "leave"] &&
+                e.date <= today &&
+                (e.endDate ?? e.date) >= today
+            )
+            .sort((a, b) => b.date.localeCompare(a.date))[0];
+          return { p: r.p, ev };
+        }),
+    [roster, state.events, today]
+  );
+
+  const loggedToday = useMemo(
+    () =>
+      state.events
+        .filter((e) => e.date === today)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 6)
+        .map((e) => ({ e, person: state.people.find((p) => p.id === e.personId) }))
+        .filter((x) => x.person),
+    [state, today]
+  );
 
   return (
     <div className="space-y-4">
@@ -149,6 +189,128 @@ export function Dashboard({
             <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-mut mt-2">{s.label}</p>
           </div>
         ))}
+      </section>
+
+      {/* Today's plan */}
+      <section className={`${panelCls} reveal overflow-hidden`} style={{ animationDelay: "135ms" }}>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 pt-4 pb-2">
+          <div>
+            <h2 className="font-display font-semibold text-lg leading-tight">{t("dash.plan")}</h2>
+            <p className="text-xs text-mut mt-0.5">{t("dash.planSub")}</p>
+          </div>
+          <button
+            onClick={() => onNavigate("calendar")}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-mut hover:text-mint transition-colors"
+          >
+            <IconCalendar className="w-3.5 h-3.5" /> {t("dash.seeCalendar")}
+            <IconChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-line">
+          {/* running tasks */}
+          <div className="px-3 sm:px-4 pb-3 pt-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut px-1.5 py-1.5">
+              {t("dash.running")} · {runningToday.length}
+            </p>
+            {runningToday.length === 0 && (
+              <p className="text-xs text-dim px-1.5 py-3">{t("dash.runningEmpty")}</p>
+            )}
+            {runningToday.map((task) => {
+              const team = state.teams.find((x) => x.id === task.teamId);
+              const color = team ? TEAM_COLORS[team.color] : null;
+              const due = dueLabel(task.dueDate);
+              return (
+                <button
+                  key={task.id}
+                  onClick={() => onNavigate("tasks")}
+                  className="w-full flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-panel2/70 text-left transition-colors group"
+                >
+                  <span className={`w-1 self-stretch rounded-full shrink-0 ${color?.bar ?? "bg-line2"}`} />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13px] font-semibold truncate group-hover:text-ink">
+                      {task.title}
+                    </span>
+                    <span className="block text-[11px] text-mut truncate">
+                      {team?.name ?? t("tasks.noTeam")} · {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
+                    </span>
+                  </span>
+                  <Chip className={DUE_TONE_CLS[due.tone]}>{due.text}</Chip>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* out today */}
+          <div className="px-3 sm:px-4 pb-3 pt-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut px-1.5 py-1.5">
+              {t("dash.out")} · {outToday.length}
+            </p>
+            {outToday.length === 0 && (
+              <p className="flex items-center gap-2 text-xs text-mint px-1.5 py-3">
+                <IconCheck className="w-3.5 h-3.5" /> {t("dash.outEmpty")}
+              </p>
+            )}
+            {outToday.map(({ p, ev }) => {
+              const kind = ev?.kind ?? "absence";
+              const m = KIND_META[kind];
+              const until = ev?.endDate && ev.endDate > today ? ev.endDate : null;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => onOpenPerson(p.id)}
+                  className="w-full flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-panel2/70 text-left transition-colors group"
+                >
+                  <Avatar name={p.name} hue={p.hue} size={30} />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13px] font-semibold truncate group-hover:text-ink">
+                      {p.name}
+                    </span>
+                    <span className="block text-[11px] text-mut truncate">
+                      {ev?.title || t("dash.noReason")}
+                      {until && <> · {t("dash.until", { d: fmtDate(until) })}</>}
+                    </span>
+                  </span>
+                  <Chip className={m.chip}>
+                    <m.Icon className="w-3 h-3" /> {t(m.key)}
+                  </Chip>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* logged today */}
+          <div className="px-3 sm:px-4 pb-3 pt-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut px-1.5 py-1.5">
+              {t("dash.loggedToday")} · {loggedToday.length}
+            </p>
+            {loggedToday.length === 0 && (
+              <p className="text-xs text-dim px-1.5 py-3">{t("dash.loggedEmpty")}</p>
+            )}
+            {loggedToday.map(({ e, person }) => {
+              const m = KIND_META[e.kind];
+              return (
+                <button
+                  key={e.id}
+                  onClick={() => onOpenPerson(e.personId)}
+                  className="w-full flex items-center gap-2.5 rounded-lg px-1.5 py-2 hover:bg-panel2/70 text-left transition-colors group"
+                >
+                  <Avatar name={person!.name} hue={person!.hue} size={30} />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13px] font-medium truncate group-hover:text-ink">
+                      {e.title}
+                    </span>
+                    <span className="block text-[11px] text-mut truncate">
+                      {person!.name} · {relTime(e.createdAt)}
+                    </span>
+                  </span>
+                  <Chip className={m.chip}>
+                    <m.Icon className="w-3 h-3" />
+                  </Chip>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       <div className="grid lg:grid-cols-3 gap-4 items-start">
