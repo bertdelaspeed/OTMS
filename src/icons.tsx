@@ -100,6 +100,36 @@ export const IconSearch = (p: P) => (
   </svg>
 );
 
+export const IconDatabase = (p: P) => (
+  <svg {...base} {...p}>
+    <ellipse cx="12" cy="5" rx="8" ry="3" />
+    <path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+    <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+  </svg>
+);
+
+export const IconCloud = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M17.5 19a4.5 4.5 0 1 0-.4-8.98A6 6 0 1 0 6 17.7" />
+    <path d="M6 17.7A3.5 3.5 0 0 0 7.5 19h10" />
+  </svg>
+);
+
+export const IconCopy = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
+export const IconServer = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="4" width="18" height="7" rx="1.5" />
+    <rect x="3" y="13" width="18" height="7" rx="1.5" />
+    <path d="M7 7.5h.01M7 16.5h.01" />
+  </svg>
+);
+
 export const IconFilter = (p: P) => (
   <svg {...base} {...p}>
     <path d="M22 4H2l8 9.5V20l4 2v-8.5L22 4z" />
