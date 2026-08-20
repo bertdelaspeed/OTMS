@@ -6,7 +6,9 @@ import { ToastProvider, btnIcon, useToast } from "./ui";
 import { I18nProvider, useI18n } from "./i18n";
 import type { Lang } from "./i18n";
 import { seedState } from "./data";
-import { fmtDateFull, getLocale, todayISO } from "./dates";
+import { fmtDateFull, getLocale, relTime, todayISO } from "./dates";
+import type { DbConfig } from "./remotes";
+import { loadDbConfig, loadLastSync, pushState, saveLastSync } from "./remotes";
 import { Dashboard } from "./views/Dashboard";
 import { People } from "./views/People";
 import { Profile } from "./views/Profile";
@@ -14,9 +16,11 @@ import { Teams } from "./views/Teams";
 import { Tasks } from "./views/Tasks";
 import { CalendarView } from "./views/CalendarView";
 import { Activity } from "./views/Activity";
+import { Database } from "./views/Database";
 import {
   IconActivity,
   IconCalendar,
+  IconDatabase,
   IconDownload,
   IconFlag,
   IconGauge,
@@ -35,6 +39,7 @@ const NAV: { key: ViewKey; labelKey: string; Icon: FC<SVGProps<SVGSVGElement>> }
   { key: "tasks", labelKey: "nav.tasks", Icon: IconListChecks },
   { key: "calendar", labelKey: "nav.calendar", Icon: IconCalendar },
   { key: "activity", labelKey: "nav.activity", Icon: IconActivity },
+  { key: "database", labelKey: "nav.database", Icon: IconDatabase },
 ];
 
 export default function App() {
@@ -83,6 +88,10 @@ function Shell() {
   const [now, setNow] = useState(() => new Date());
   const [armed, setArmed] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [dbCfg, setDbCfg] = useState<DbConfig>(loadDbConfig);
+  const [lastSync, setLastSync] = useState<string | null>(loadLastSync);
+  const skipPush = useRef(true);
+  const failNotified = useRef(false);
 
   useEffect(() => {
     const i = window.setInterval(() => setNow(new Date()), 30000);
@@ -94,6 +103,29 @@ function Shell() {
     const timer = window.setTimeout(() => setArmed(false), 2600);
     return () => window.clearTimeout(timer);
   }, [armed]);
+
+  /* auto-push every change to the configured remote backend */
+  useEffect(() => {
+    if (skipPush.current) {
+      skipPush.current = false;
+      return;
+    }
+    if (dbCfg.kind === "local" || !dbCfg.autoSync) return;
+    const timer = window.setTimeout(() => {
+      void pushState(dbCfg, state).then((r) => {
+        if (r.ok && r.updatedAt) {
+          saveLastSync(r.updatedAt);
+          setLastSync(r.updatedAt);
+          failNotified.current = false;
+        } else if (!r.ok && !failNotified.current) {
+          failNotified.current = true;
+          push(t("db.syncFail", { msg: r.message }), "warn");
+        }
+      });
+    }, 1600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, dbCfg]);
 
   const openTasks = state.tasks.filter((x) => x.status !== "done").length;
   const records = state.people.length + state.teams.length + state.tasks.length + state.events.length;
@@ -110,6 +142,7 @@ function Shell() {
     tasks: openTasks,
     calendar: null,
     activity: null,
+    database: null,
   };
 
   const crumb = personId
@@ -254,6 +287,21 @@ function Shell() {
               e.target.value = "";
             }}
           />
+          <button
+            onClick={() => navigate("database")}
+            className="hidden md:flex w-full items-center gap-2 px-1.5 pt-1 font-mono text-[9.5px] text-dim hover:text-mut transition-colors text-left"
+            title={t("nav.database")}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                dbCfg.kind === "local" ? "bg-line2" : "bg-mint pulse-dot"
+              }`}
+            />
+            <span className="truncate">
+              {t(`db.kind.${dbCfg.kind}`)}
+              {lastSync ? ` · ${t("db.sidebarSynced", { t: relTime(lastSync) })}` : ""}
+            </span>
+          </button>
           <p className="hidden md:flex items-center gap-2 px-1.5 pt-1 font-mono text-[9.5px] text-dim">
             <span className="w-1.5 h-1.5 rounded-full bg-mint pulse-dot shrink-0" />
             {t("data.saved", { n: records })}
@@ -297,6 +345,20 @@ function Shell() {
               <CalendarView onOpenPerson={setPersonId} onNavigate={navigate} />
             ) : view === "activity" ? (
               <Activity onOpenPerson={setPersonId} />
+            ) : view === "database" ? (
+              <Database
+                cfg={dbCfg}
+                onSaved={setDbCfg}
+                onPulled={(s) => {
+                  skipPush.current = true;
+                  dispatch({ type: "RESET", state: s });
+                }}
+                lastSync={lastSync}
+                onSynced={(iso) => {
+                  saveLastSync(iso);
+                  setLastSync(iso);
+                }}
+              />
             ) : (
               <Tasks />
             )}
