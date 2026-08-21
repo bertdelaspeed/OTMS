@@ -16,17 +16,30 @@ import {
 import { relTime } from "../dates";
 import { Field, Segmented, TextInput, btnGhost, btnPrimary, panelCls, useToast } from "../ui";
 import {
+  IconCalendar,
   IconCheck,
   IconCloud,
   IconCopy,
   IconDatabase,
   IconDownload,
   IconInbox,
+  IconRefresh,
   IconServer,
   IconUpload,
   IconX,
 } from "../icons";
 import { useI18n } from "../i18n";
+import { getLocale, relTime as rel } from "../dates";
+import {
+  authorizeGoogle,
+  loadGcalCfg,
+  loadGcalLinks,
+  loadGcalToken,
+  saveGcalCfg,
+  saveGcalToken,
+  syncGcal,
+} from "../gcal";
+import type { GcalCfg, GcalToken } from "../gcal";
 
 function CodeBlock({ code, copyLabel, copiedLabel }: { code: string; copyLabel: string; copiedLabel: string }) {
   const [copied, setCopied] = useState(false);
@@ -103,6 +116,175 @@ const BACKENDS: { kind: BackendKind; icon: ReactNode; nameKey: string; descKey: 
     tagCls: "text-amber bg-amber/10 border-amber/30",
   },
 ];
+
+function GooglePanel({ appState }: { appState: AppState }) {
+  const { t, tp } = useI18n();
+  const { push } = useToast();
+  const [token, setToken] = useState<GcalToken | null>(() => loadGcalToken());
+  const [gcfg, setGcfg] = useState<GcalCfg>(() => loadGcalCfg());
+  const [clientId, setClientId] = useState(() => loadGcalCfg().clientId);
+  const [connecting, setConnecting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [linksCount, setLinksCount] = useState(() => Object.keys(loadGcalLinks()).length);
+
+  const connected = !!token && token.expiresAt > Date.now();
+  const origin = window.location.origin;
+
+  const persistCfg = (patch: Partial<GcalCfg>) => {
+    const next = { ...gcfg, ...patch };
+    setGcfg(next);
+    saveGcalCfg(next);
+  };
+
+  const connect = async () => {
+    if (!clientId.trim()) return push(t("gcal.needId"), "warn");
+    setConnecting(true);
+    try {
+      const tk = await authorizeGoogle(clientId.trim());
+      persistCfg({ clientId: clientId.trim() });
+      setToken(tk);
+      push(t("gcal.connectedAs", { email: tk.email ?? tk.name ?? "Google" }));
+    } catch (e) {
+      push(t("gcal.error", { msg: e instanceof Error ? e.message : "?" }), "warn");
+    }
+    setConnecting(false);
+  };
+
+  const doSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await syncGcal(appState);
+      if (!res) {
+        push(t("gcal.expired"), "warn");
+      } else {
+        setLinksCount(Object.keys(loadGcalLinks()).length);
+        const changed = res.created + res.updated + res.deleted;
+        push(
+          changed > 0
+            ? t("gcal.syncDone", { c: res.created, u: res.updated, d: res.deleted })
+            : t("gcal.syncNoop")
+        );
+      }
+    } catch (e) {
+      push(t("gcal.error", { msg: e instanceof Error ? e.message : "?" }), "warn");
+    }
+    setSyncing(false);
+  };
+
+  return (
+    <section className={`${panelCls} reveal overflow-hidden`} style={{ animationDelay: "180ms" }}>
+      <div className="flex flex-wrap items-center gap-3 px-4 sm:px-5 py-4 border-b border-line">
+        <span className="w-9 h-9 rounded-lg bg-panel2 border border-line2 inline-flex items-center justify-center font-display font-bold text-lg text-mint shrink-0">
+          G
+        </span>
+        <div className="flex-1 min-w-[180px]">
+          <h2 className="font-display font-semibold text-lg leading-tight">{t("gcal.title")}</h2>
+          <p className="text-xs text-mut mt-0.5">{t("gcal.sub")}</p>
+        </div>
+        <span
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${
+            connected
+              ? "border-mint/40 bg-mint/10 text-mint"
+              : "border-line2 text-mut"
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${connected ? "bg-mint pulse-dot" : "bg-line2"}`} />
+          {connected ? t("gcal.connectedAs", { email: token!.email ?? token!.name ?? "Google" }) : t("gcal.notConnected")}
+        </span>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-5 p-4 sm:p-5">
+        {/* left — controls */}
+        <div className="space-y-4">
+          {!connected && (
+            <Field label={t("gcal.clientId")}>
+              <TextInput
+                value={clientId}
+                placeholder={t("gcal.clientIdPh")}
+                onChange={(e) => setClientId(e.target.value)}
+              />
+            </Field>
+          )}
+
+          {connected ? (
+            <div className="rounded-lg border border-line bg-panel2/50 px-3.5 py-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-mut">{t("gcal.tokenUntil")}</span>
+                <span className="font-mono text-[11px] text-ink">
+                  {new Date(token!.expiresAt).toLocaleTimeString(getLocale(), { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-mut">{t("db.last")}</span>
+                <span className="font-mono text-[11px] text-ink">
+                  {gcfg.lastSync ? rel(gcfg.lastSync) : t("db.never")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-mut">{t("gcal.mirrored")}</span>
+                <span className="font-mono text-[11px] text-mint">{tp("gcal.mirroredCount", linksCount)}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11.5px] text-dim leading-relaxed">{t("gcal.guideIntro")}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {connected ? (
+              <>
+                <button className={btnPrimary} onClick={() => void doSync()} disabled={syncing}>
+                  <IconRefresh className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? t("gcal.syncing") : t("gcal.syncNow")}
+                </button>
+                <button
+                  className={`${btnGhost} hover:text-coral hover:border-coral/40`}
+                  onClick={() => {
+                    saveGcalToken(null);
+                    setToken(null);
+                  }}
+                >
+                  <IconX className="w-4 h-4" /> {t("gcal.disconnect")}
+                </button>
+              </>
+            ) : (
+              <button className={btnPrimary} onClick={() => void connect()} disabled={connecting}>
+                <IconCalendar className="w-4 h-4" />
+                {connecting ? t("gcal.connecting") : t("gcal.connect")}
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-3">
+              <Toggle on={gcfg.enabled} onChange={(v) => persistCfg({ enabled: v })} />
+              <span className="min-w-0">
+                <span className="block text-[13px] font-medium">{t("gcal.mirror")}</span>
+                <span className="block text-[11px] text-dim">{t("gcal.mirrorHint")}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Toggle on={gcfg.deleteOrphans} onChange={(v) => persistCfg({ deleteOrphans: v })} />
+              <span className="text-[13px] font-medium">{t("gcal.orphans")}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* right — setup guide */}
+        <div className="space-y-2.5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-mut">{t("gcal.guide")}</p>
+          <p className="text-[11px] text-dim">{t("gcal.origin")}</p>
+          <CodeBlock code={origin} copyLabel={t("db.copy")} copiedLabel={t("db.copied")} />
+          <ol className="space-y-1.5 text-[11.5px] leading-relaxed text-mut list-none">
+            <li>{t("gcal.g1")}</li>
+            <li>{t("gcal.g2")}</li>
+            <li>{t("gcal.g3")}</li>
+            <li>{t("gcal.g4")}</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function Database({
   cfg,
