@@ -7,6 +7,7 @@ import { I18nProvider, useI18n } from "./i18n";
 import type { Lang } from "./i18n";
 import { seedState } from "./data";
 import { fmtDateFull, getLocale, relTime, todayISO } from "./dates";
+import { gcalConnected, loadGcalCfg, saveGcalCfg, syncGcal } from "./gcal";
 import type { DbConfig } from "./remotes";
 import { loadDbConfig, loadLastSync, pushState, saveLastSync } from "./remotes";
 import { Dashboard } from "./views/Dashboard";
@@ -103,6 +104,22 @@ function Shell() {
     const timer = window.setTimeout(() => setArmed(false), 2600);
     return () => window.clearTimeout(timer);
   }, [armed]);
+
+  /* auto-mirror tasks to Google Calendar when enabled */
+  const tasksSig = state.tasks
+    .map((x) => [x.id, x.title, x.startDate, x.dueDate, x.status].join("|"))
+    .join("§");
+  useEffect(() => {
+    const cfg = loadGcalCfg();
+    if (!cfg.enabled || !gcalConnected()) return;
+    const timer = window.setTimeout(() => {
+      void syncGcal(state).then((res) => {
+        if (res) saveGcalCfg({ ...loadGcalCfg(), lastSync: new Date().toISOString() });
+      });
+    }, 2200);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasksSig]);
 
   /* auto-push every change to the configured remote backend */
   useEffect(() => {

@@ -6,10 +6,11 @@ export type EventKind =
   | "absence"
   | "sick"
   | "leave"
+  | "permission"
   | "task"
   | "observation";
 
-export type StatusKey = "available" | "on-task" | "absent" | "sick" | "leave";
+export type StatusKey = "available" | "on-task" | "errand" | "absent" | "sick" | "leave";
 
 export type TeamColor = "amber" | "coral" | "mint" | "sky" | "cyan" | "rose";
 
@@ -55,6 +56,8 @@ export interface PersonEvent {
   note: string;
   date: string; // ISO date of occurrence / range start
   endDate: string | null; // ISO date for ranges (leave, sick, absence)
+  timeFrom?: string | null; // HH:MM — short permissions only
+  timeTo?: string | null; // HH:MM — short permissions only
   createdAt: string; // ISO datetime the record was logged
   taskId: string | null;
 }

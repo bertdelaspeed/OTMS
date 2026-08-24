@@ -188,6 +188,20 @@ export function seedState(): AppState {
       endDate: d(2),
       note: "Approved last week. Back at the desk after the weekend.",
     }),
+    ev("p-marco", "permission", "Errand — apartment move", 0, {
+      timeFrom: "09:00",
+      timeTo: "13:00",
+      note: "Half day approved. Back for the afternoon stocktake.",
+    }),
+    ev("p-aisha", "permission", "Arriving late — medical appointment", 0, {
+      timeFrom: "08:00",
+      timeTo: "10:30",
+      note: "Will make up the hours on Thursday.",
+    }),
+    ev("p-samuel", "permission", "Bank run during lunch break", 1, {
+      timeFrom: "12:00",
+      timeTo: "14:00",
+    }),
     ev("p-jonas", "sick", "Sick day — flu", 0, { note: "Called in at 08:40." }),
     ev("p-marco", "observation", "Requested a schedule swap next week", 0, {
       note: "Wants Tuesday off in exchange for Saturday shift.",

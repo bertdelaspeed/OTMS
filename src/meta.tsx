@@ -4,6 +4,7 @@ import {
   IconActivity,
   IconAlert,
   IconBriefcase,
+  IconClock,
   IconEye,
   IconStar,
   IconSun,
@@ -55,6 +56,13 @@ export const KIND_META: Record<
     dot: "bg-sky",
     node: "bg-sky/15 text-sky border-sky/40",
   },
+  permission: {
+    key: "kind.permission",
+    Icon: IconClock,
+    chip: "text-orchid bg-orchid/10 border-orchid/30",
+    dot: "bg-orchid",
+    node: "bg-orchid/15 text-orchid border-orchid/40",
+  },
   task: {
     key: "kind.task",
     Icon: IconBriefcase,
@@ -77,6 +85,7 @@ export const KIND_ORDER: EventKind[] = [
   "absence",
   "sick",
   "leave",
+  "permission",
   "task",
   "observation",
 ];
@@ -102,6 +111,13 @@ export const STATUS_META: Record<
     bar: "bg-amber",
     text: "text-amber",
   },
+  errand: {
+    key: "status.errand",
+    chip: "text-orchid bg-orchid/10 border-orchid/30",
+    dot: "bg-orchid",
+    bar: "bg-orchid",
+    text: "text-orchid",
+  },
   absent: {
     key: "status.absent",
     chip: "text-rose bg-rose/10 border-rose/30",
@@ -125,7 +141,7 @@ export const STATUS_META: Record<
   },
 };
 
-export const STATUS_ORDER: StatusKey[] = ["available", "on-task", "absent", "sick", "leave"];
+export const STATUS_ORDER: StatusKey[] = ["available", "on-task", "errand", "absent", "sick", "leave"];
 
 export const TEAM_COLORS: Record<
   TeamColor,

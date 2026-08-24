@@ -196,6 +196,7 @@ const KIND_PDF_COLOR: Record<EventKind, RGB> = {
   absence: [190, 72, 110],
   sick: [20, 140, 140],
   leave: [45, 110, 180],
+  permission: [150, 90, 170],
   task: [22, 128, 77],
   observation: [110, 130, 110],
 };
@@ -203,6 +204,7 @@ const KIND_PDF_COLOR: Record<EventKind, RGB> = {
 const STATUS_PDF_COLOR: Record<StatusKey, RGB> = {
   available: [22, 128, 77],
   "on-task": [176, 119, 30],
+  errand: [150, 90, 170],
   absent: [190, 72, 110],
   sick: [20, 140, 140],
   leave: [45, 110, 180],

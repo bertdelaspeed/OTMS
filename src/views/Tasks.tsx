@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Task } from "../types";
 import { involvedIds, useStore } from "../store";
 import { TEAM_COLORS } from "../meta";
 import { dueLabel, fmtDate, todayISO } from "../dates";
+import { loadGcalLinks } from "../gcal";
 import {
   Avatar,
   Chip,
@@ -37,6 +38,15 @@ export function Tasks() {
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState<{ task: Task | null } | null>(null);
+  const [gcalTick, setGcalTick] = useState(0);
+
+  useEffect(() => {
+    const bump = () => setGcalTick((x) => x + 1);
+    window.addEventListener("rollcall-gcal-synced", bump);
+    return () => window.removeEventListener("rollcall-gcal-synced", bump);
+  }, []);
+
+  const mirrored = useMemo(() => new Set(Object.keys(loadGcalLinks())), [gcalTick, state.tasks]);
 
   const rows = useMemo(
     () =>
@@ -206,6 +216,14 @@ export function Tasks() {
                     <span className="text-xs text-dim">{t("tasks.noTeam")}</span>
                   )}
                 </div>
+                {mirrored.has(r.task.id) && (
+                  <span
+                    title={t("gcal.mirrored")}
+                    className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-sky/10 border border-sky/30 text-sky font-display font-bold text-[11px] select-none"
+                  >
+                    G
+                  </span>
+                )}
                 <div className="flex -space-x-1.5 shrink-0">
                   {r.members.slice(0, 4).map((m) => (
                     <Avatar key={m.id} name={m.name} hue={m.hue} size={24} className="ring-2 ring-panel" />

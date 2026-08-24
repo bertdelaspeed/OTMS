@@ -507,8 +507,11 @@ export function EventModal({
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(todayISO());
   const [endDate, setEndDate] = useState("");
+  const [timeFrom, setTimeFrom] = useState("");
+  const [timeTo, setTimeTo] = useState("");
   const [note, setNote] = useState("");
   const [err, setErr] = useState("");
+  const [timeErr, setTimeErr] = useState("");
   const [picked, setPicked] = useState("");
 
   useEffect(() => {
@@ -517,8 +520,11 @@ export function EventModal({
     setTitle("");
     setDate(prefillDate ?? todayISO());
     setEndDate("");
+    setTimeFrom("");
+    setTimeTo("");
     setNote("");
     setErr("");
+    setTimeErr("");
     setPicked(state.people[0]?.id ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, personId]);
@@ -528,9 +534,14 @@ export function EventModal({
   if (!person) return null;
 
   const isRange = kind === "absence" || kind === "sick" || kind === "leave";
+  const isTime = kind === "permission";
 
   const submit = () => {
     if (!title.trim()) return setErr(t("mev.required"));
+    if (isTime) {
+      if (!timeFrom || !timeTo) return setTimeErr(t("mev.timeRequired"));
+      if (timeTo <= timeFrom) return setTimeErr(t("mev.timeInvalid"));
+    }
     dispatch({
       type: "ADD_EVENT",
       event: makeEvent({
@@ -540,6 +551,8 @@ export function EventModal({
         note: note.trim(),
         date: date || todayISO(),
         endDate: isRange && endDate ? endDate : null,
+        timeFrom: isTime ? timeFrom : null,
+        timeTo: isTime ? timeTo : null,
         taskId: null,
       }),
     });
@@ -598,22 +611,55 @@ export function EventModal({
           <TextInput autoFocus value={title} placeholder={t("mev.whatPh")} onChange={(e) => setTitle(e.target.value)} />
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t("mev.date")}>
-            <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
-          <Field label={`${t("mev.end")} · ${t("common.optional")}`}>
-            <TextInput
-              type="date"
-              value={endDate}
-              min={date}
-              disabled={!isRange}
-              onChange={(e) => setEndDate(e.target.value)}
-              className={!isRange ? "opacity-40" : ""}
-            />
-          </Field>
-        </div>
-        {isRange && <p className="text-[11px] text-dim -mt-2">{t("mev.endHint")}</p>}
+        {isTime ? (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label={t("mev.date")}>
+                <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </Field>
+              <Field label={t("mev.timeFrom")} error={timeErr}>
+                <TextInput
+                  type="time"
+                  value={timeFrom}
+                  onChange={(e) => {
+                    setTimeFrom(e.target.value);
+                    setTimeErr("");
+                  }}
+                />
+              </Field>
+              <Field label={t("mev.timeTo")}>
+                <TextInput
+                  type="time"
+                  value={timeTo}
+                  onChange={(e) => {
+                    setTimeTo(e.target.value);
+                    setTimeErr("");
+                  }}
+                />
+              </Field>
+            </div>
+            <p className="text-[11px] text-dim -mt-2">{t("mev.timeHint")}</p>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t("mev.date")}>
+                <TextInput type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </Field>
+              <Field label={`${t("mev.end")} · ${t("common.optional")}`}>
+                <TextInput
+                  type="date"
+                  value={endDate}
+                  min={date}
+                  disabled={!isRange}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className={!isRange ? "opacity-40" : ""}
+                />
+              </Field>
+            </div>
+            {isRange && <p className="text-[11px] text-dim -mt-2">{t("mev.endHint")}</p>}
+          </>
+        )}
 
         <Field label={`${t("mev.note")} · ${t("common.optional")}`}>
           <TextArea rows={3} value={note} placeholder={t("mev.notePh")} onChange={(e) => setNote(e.target.value)} />

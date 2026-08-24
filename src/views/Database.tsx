@@ -634,6 +634,9 @@ export function Database({
           </section>
         </div>
       </div>
+
+      {/* Google Calendar mirroring */}
+      <GooglePanel appState={state} />
     </div>
   );
 }

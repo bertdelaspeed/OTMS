@@ -3,7 +3,7 @@ import type { EventKind } from "../types";
 import { personStatus, tasksFor, teamsOf, useStore } from "../store";
 import { KIND_META, STATUS_META } from "../meta";
 import { exportPersonPdf } from "../exports";
-import { daysBetween, dueLabel, fmtDate, fmtDateFull, fmtDateYear, relTime, spanDays, todayISO } from "../dates";
+import { daysBetween, dueLabel, fmtDate, fmtDateFull, fmtDateYear, fmtTimeRange, relTime, spanDays, todayISO, windowHours } from "../dates";
 import {
   Avatar,
   Chip,
@@ -41,6 +41,7 @@ const KIND_STAT_KEY: Record<EventKind, string> = {
   absence: "profile.k.absence",
   sick: "profile.k.sick",
   leave: "profile.k.leave",
+  permission: "profile.k.permission",
   task: "profile.k.task",
   observation: "profile.k.observation",
 };
@@ -82,8 +83,10 @@ export function Profile({
   const kindStats = (Object.keys(KIND_STAT_KEY) as EventKind[]).map((k) => {
     const list = events.filter((e) => e.kind === k);
     const isRange = k === "absence" || k === "sick" || k === "leave";
+    const isHours = k === "permission";
     const days = list.reduce((n, e) => n + spanDays(e.date, e.endDate), 0);
-    return { k, n: list.length, days, ranged: isRange };
+    const hours = Math.round(list.reduce((n, e) => n + windowHours(e.timeFrom, e.timeTo), 0) * 10) / 10;
+    return { k, n: list.length, days, hours, ranged: isRange, isHours };
   });
 
   const presentKinds = kindStats.filter((s) => s.n > 0).map((s) => s.k);
@@ -114,7 +117,9 @@ export function Profile({
         days: s.ranged ? s.days : null,
       })),
       events: [...events].reverse().map((e) => ({
-        date: e.endDate ? `${fmtDate(e.date)} → ${fmtDate(e.endDate)}` : fmtDate(e.date),
+        date:
+          (e.endDate ? `${fmtDate(e.date)} → ${fmtDate(e.endDate)}` : fmtDate(e.date)) +
+          (e.kind === "permission" && e.timeFrom && e.timeTo ? ` · ${fmtTimeRange(e.timeFrom, e.timeTo)}` : ""),
         kind: e.kind,
         typeLabel: t(KIND_META[e.kind].key),
         title: e.title,
@@ -231,11 +236,15 @@ export function Profile({
                 <m.Icon className="w-3.5 h-3.5" />
               </span>
               <p className="font-display font-bold text-xl leading-none mt-2">
-                {s.ranged ? s.days : s.n}
-                {s.ranged && (
-                  <span className="text-xs text-mut font-body font-normal">
-                    {lang === "fr" ? "j" : "d"}
-                  </span>
+                {s.isHours ? s.hours : s.ranged ? s.days : s.n}
+                {s.isHours ? (
+                  <span className="text-xs text-mut font-body font-normal">h</span>
+                ) : (
+                  s.ranged && (
+                    <span className="text-xs text-mut font-body font-normal">
+                      {lang === "fr" ? "j" : "d"}
+                    </span>
+                  )
                 )}
               </p>
               <p className="text-[10px] font-mono uppercase tracking-[0.1em] text-mut mt-1">
@@ -343,8 +352,11 @@ export function Profile({
                         <Chip className={m.chip}>{t(m.key)}</Chip>
                         <span className="font-mono text-[10.5px] text-dim">
                           {fmtDate(e.date)}
-                          {e.endDate ? ` → ${fmtDate(e.endDate)}` : ""} ·{" "}
-                          {t("profile.logged", { t: relTime(e.createdAt) })}
+                          {e.endDate ? ` → ${fmtDate(e.endDate)}` : ""}
+                          {e.kind === "permission" && e.timeFrom && e.timeTo
+                            ? ` · ${fmtTimeRange(e.timeFrom, e.timeTo)}`
+                            : ""}{" "}
+                          · {t("profile.logged", { t: relTime(e.createdAt) })}
                         </span>
                       </div>
                     </div>
