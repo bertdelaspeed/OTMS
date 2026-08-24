@@ -141,6 +141,32 @@ export function monthEndISO(iso: string): string {
   return toISO(new Date(year, month0 + 1, 0));
 }
 
+function nowHHMM(): string {
+  const d = new Date();
+  return `${`${d.getHours()}`.padStart(2, "0")}:${`${d.getMinutes()}`.padStart(2, "0")}`;
+}
+
+/** True while the current clock time sits inside [from..to] (HH:MM strings). */
+export function nowInWindow(from: string | null | undefined, to: string | null | undefined): boolean {
+  if (!from || !to) return false;
+  const now = nowHHMM();
+  return from <= now && now <= to;
+}
+
+/** Duration of a time window in hours (0 when malformed). */
+export function windowHours(from: string | null | undefined, to: string | null | undefined): number {
+  if (!from || !to) return 0;
+  const [fh, fm] = from.split(":").map(Number);
+  const [th, tm] = to.split(":").map(Number);
+  const mins = (th * 60 + tm) - (fh * 60 + fm);
+  return mins > 0 ? Math.round((mins / 60) * 10) / 10 : 0;
+}
+
+export function fmtTimeRange(from: string | null | undefined, to: string | null | undefined): string {
+  if (!from || !to) return "";
+  return `${from} – ${to}`;
+}
+
 /** Days of [eStart..eEnd] that fall inside [rStart..rEnd] (0 if none). */
 export function overlapDays(
   eStart: string,

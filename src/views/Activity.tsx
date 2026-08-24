@@ -51,6 +51,7 @@ const CAT_DEFS: { key: Cat; dot: string }[] = [
   { key: "absence", dot: "bg-rose" },
   { key: "sick", dot: "bg-cyan" },
   { key: "leave", dot: "bg-sky" },
+  { key: "permission", dot: "bg-orchid" },
   { key: "observation", dot: "bg-sage" },
 ];
 
@@ -132,6 +133,7 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
       leaveDays: daysFor("leave"),
       commendations: count("commendation"),
       misconduct: count("misconduct"),
+      permissions: count("permission"),
       observations: count("observation"),
       taskEvents: count("task"),
     };
@@ -179,6 +181,11 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
                 {RANGE_KINDS.includes(e.kind) && e.endDate && e.endDate !== e.date && (
                   <span className="font-mono text-[10px] text-dim">
                     {fmtDate(e.date)} → {fmtDate(e.endDate)}
+                  </span>
+                )}
+                {e.kind === "permission" && e.timeFrom && e.timeTo && (
+                  <span className="font-mono text-[10px] text-orchid">
+                    {e.timeFrom} – {e.timeTo}
                   </span>
                 )}
               </span>
@@ -265,6 +272,7 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
           abs: daysFor("absence"),
           sick: daysFor("sick"),
           leave: daysFor("leave"),
+          permissions: count("permission"),
           observations: count("observation"),
           taskEvents: count("task"),
           total: mine.length,
@@ -283,6 +291,7 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
     { label: t("kind.absence"), value: agg.absDays, cls: "text-rose bg-rose/10 border-rose/30", icon: <KIND_META.absence.Icon className="w-3 h-3" /> },
     { label: t("kind.sick"), value: agg.sickDays, cls: "text-cyan bg-cyan/10 border-cyan/30", icon: <KIND_META.sick.Icon className="w-3 h-3" /> },
     { label: t("kind.leave"), value: agg.leaveDays, cls: "text-sky bg-sky/10 border-sky/30", icon: <KIND_META.leave.Icon className="w-3 h-3" /> },
+    { label: t("kind.permission"), value: agg.permissions, cls: "text-orchid bg-orchid/10 border-orchid/30", icon: <KIND_META.permission.Icon className="w-3 h-3" /> },
     { label: t("kind.observation"), value: agg.observations, cls: "text-sage bg-sage/10 border-sage/30", icon: <KIND_META.observation.Icon className="w-3 h-3" /> },
     { label: t("kind.task"), value: agg.taskEvents, cls: "text-mint bg-mint/10 border-mint/30", icon: <KIND_META.task.Icon className="w-3 h-3" /> },
   ];
@@ -584,6 +593,11 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
                         )}
                         {r.leave > 0 && (
                           <Chip className="text-sky bg-sky/10 border-sky/30 px-1.5">{r.leave}d</Chip>
+                        )}
+                        {r.permissions > 0 && (
+                          <Chip className="text-orchid bg-orchid/10 border-orchid/30 px-1.5">
+                            <KIND_META.permission.Icon className="w-3 h-3" /> {r.permissions}
+                          </Chip>
                         )}
                         {r.observations > 0 && (
                           <Chip className="text-sage bg-sage/10 border-sage/30 px-1.5">

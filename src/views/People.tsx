@@ -10,6 +10,14 @@ import { useI18n } from "../i18n";
 
 type Filter = StatusKey | "all";
 
+/* Shared column grid: person | status | teams | (lg) current task | last record | actions */
+const GRID_MD =
+  "md:grid-cols-[minmax(220px,1.5fr)_120px_minmax(170px,1.1fr)_minmax(180px,1fr)_auto]";
+const GRID_LG =
+  "lg:grid-cols-[minmax(240px,1.4fr)_124px_minmax(180px,1fr)_minmax(210px,1.25fr)_minmax(180px,1fr)_auto]";
+const colHead =
+  "text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-dim";
+
 export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void }) {
   const { state, dispatch } = useStore();
   const { t, tp } = useI18n();
@@ -32,7 +40,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
   );
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: rows.length, available: 0, "on-task": 0, absent: 0, sick: 0, leave: 0 };
+    const c: Record<string, number> = { all: rows.length, available: 0, "on-task": 0, errand: 0, absent: 0, sick: 0, leave: 0 };
     rows.forEach((r) => (c[r.s.key] += 1));
     return c;
   }, [rows]);
@@ -123,20 +131,39 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
         </div>
       ) : (
         <div className={`${panelCls} divide-y divide-line overflow-hidden`}>
+          {/* Column headers */}
+          <div
+            className={`hidden md:grid items-center gap-3 px-3.5 sm:px-4 py-2.5 border-b border-line2 bg-panel2/40 ${GRID_MD} ${GRID_LG}`}
+          >
+            <span className={colHead}>{t("people.col.person")}</span>
+            <span className={colHead}>{t("people.col.status")}</span>
+            <span className={colHead}>{t("people.col.teams")}</span>
+            <span className={`hidden lg:block ${colHead}`}>{t("people.col.task")}</span>
+            <span className={colHead}>{t("people.col.last")}</span>
+            <span aria-hidden />
+          </div>
+
           {visible.map((r, i) => (
             <div
               key={r.p.id}
               onClick={() => onOpenPerson(r.p.id)}
-              className="reveal group flex items-center gap-3 px-3.5 sm:px-4 py-3 hover:bg-panel2/60 cursor-pointer transition-colors"
+              className={`reveal group flex items-center gap-3 px-3.5 sm:px-4 py-3 hover:bg-panel2/60 cursor-pointer transition-colors md:grid md:items-center ${GRID_MD} ${GRID_LG}`}
               style={{ animationDelay: `${Math.min(i * 40, 360)}ms` }}
             >
-              <Avatar name={r.p.name} hue={r.p.hue} size={38} />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate leading-tight">{r.p.name}</p>
-                <p className="text-xs text-mut truncate leading-tight mt-0.5">{r.p.role}</p>
+              {/* Person — name wraps, never truncates */}
+              <div className="flex items-center gap-3 flex-1 min-w-0 md:flex-none md:min-w-0">
+                <Avatar name={r.p.name} hue={r.p.hue} size={38} className="shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm leading-snug break-words">{r.p.name}</p>
+                  <p className="text-xs text-mut leading-snug break-words mt-0.5">{r.p.role}</p>
+                </div>
               </div>
 
-              <div className="hidden md:flex items-center gap-1.5 w-44 shrink-0">
+              <div className="w-[112px] shrink-0 md:w-auto">
+                <StatusPill status={r.s.key} pulse />
+              </div>
+
+              <div className="hidden md:flex items-center gap-1.5 flex-wrap min-w-0">
                 {r.teams.length === 0 && <span className="text-xs text-dim">{t("people.noTeam")}</span>}
                 {r.teams.slice(0, 2).map((tm) => (
                   <Chip key={tm.id} className={TEAM_COLORS[tm.color].chip}>
@@ -144,19 +171,21 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
                     {tm.name}
                   </Chip>
                 ))}
+                {r.teams.length > 2 && (
+                  <span className="font-mono text-[10px] text-dim">+{r.teams.length - 2}</span>
+                )}
               </div>
 
-              <div className="w-[112px] shrink-0">
-                <StatusPill status={r.s.key} pulse />
-              </div>
-
-              <div className="hidden lg:flex items-center gap-1.5 w-48 shrink-0 text-xs">
+              <div className="hidden lg:flex items-start gap-1.5 min-w-0 text-xs">
                 {r.load.length === 0 ? (
                   <span className="text-dim">{t("people.noActive")}</span>
                 ) : (
                   <>
-                    <IconBriefcase className="w-3.5 h-3.5 text-amber shrink-0" />
-                    <span className="truncate text-mut" title={r.load.map((x) => x.title).join(", ")}>
+                    <IconBriefcase className="w-3.5 h-3.5 text-amber shrink-0 mt-px" />
+                    <span
+                      className="text-mut leading-snug line-clamp-2 break-words"
+                      title={r.load.map((x) => x.title).join(", ")}
+                    >
                       {r.load[0].title}
                       {r.load.length > 1 && ` +${r.load.length - 1}`}
                     </span>
@@ -164,7 +193,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
                 )}
               </div>
 
-              <div className="hidden sm:flex items-center gap-1.5 w-36 shrink-0 text-xs text-mut">
+              <div className="hidden sm:flex items-center gap-1.5 w-36 md:w-auto min-w-0 text-xs text-mut">
                 {r.last ? (
                   <>
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${KIND_META[r.last.kind].dot}`} />
@@ -178,7 +207,10 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
                 )}
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+              <div
+                className="flex items-center gap-1.5 shrink-0 justify-self-end"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <button
                   className={`${btnIcon} hover:text-amber`}
                   title={t("common.edit")}
@@ -187,9 +219,8 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
                   <IconPencil className="w-4 h-4" />
                 </button>
                 <DangerAction onConfirm={() => remove(r.p)} label={t("profile.remove", { name: r.p.name })} />
+                <IconChevronRight className="hidden sm:block w-4 h-4 text-dim group-hover:text-mut transition-colors" />
               </div>
-
-              <IconChevronRight className="hidden sm:block w-4 h-4 text-dim group-hover:text-mut shrink-0 transition-colors" />
             </div>
           ))}
         </div>

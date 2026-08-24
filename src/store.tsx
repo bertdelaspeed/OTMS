@@ -10,7 +10,7 @@ import type {
   Team,
 } from "./types";
 import { seedState, uid } from "./data";
-import { todayISO } from "./dates";
+import { nowInWindow, todayISO } from "./dates";
 
 const KEY = "rollcall.state.v2";
 
@@ -263,9 +263,10 @@ export interface StatusInfo {
 /**
  * Live status on today:
  * 1. an absence / sick / leave record covering today wins;
- * 2. otherwise a task that "takes" the person today (active, or planned
+ * 2. a short permission whose hour window is running right now → errand;
+ * 3. otherwise a task that "takes" the person today (active, or planned
  *    inside its work period) marks them on-task;
- * 3. otherwise they are available.
+ * 4. otherwise they are available.
  */
 export function personStatus(state: AppState, personId: string): StatusInfo {
   const today = todayISO();
@@ -280,6 +281,19 @@ export function personStatus(state: AppState, personId: string): StatusInfo {
   if (out) {
     const key: StatusKey = out.kind === "absence" ? "absent" : out.kind === "sick" ? "sick" : "leave";
     return { key, detail: out.title };
+  }
+  const perm = state.events
+    .filter(
+      (e) =>
+        e.personId === personId &&
+        e.kind === "permission" &&
+        e.date === today &&
+        nowInWindow(e.timeFrom, e.timeTo)
+    )
+    .sort((x, y) => (y.timeTo ?? "").localeCompare(x.timeTo ?? ""))[0];
+  if (perm) {
+    const range = perm.timeFrom && perm.timeTo ? ` · ${perm.timeFrom} – ${perm.timeTo}` : "";
+    return { key: "errand", detail: perm.title + range };
   }
   const blocking = blockingTasksOn(state, personId, today);
   if (blocking.length > 0) {

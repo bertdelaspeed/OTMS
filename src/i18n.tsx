@@ -43,6 +43,7 @@ const en: Record<string, string> = {
   "status.absent": "Absent",
   "status.sick": "Sick",
   "status.leave": "On leave",
+  "status.errand": "Errand",
 
   /* event kinds */
   "kind.commendation": "Commendation",
@@ -52,6 +53,12 @@ const en: Record<string, string> = {
   "kind.leave": "Leave",
   "kind.task": "Task",
   "kind.observation": "Observation",
+  "kind.permission": "Permission",
+  "people.col.person": "Person",
+  "people.col.status": "Status",
+  "people.col.teams": "Teams",
+  "people.col.task": "Current task",
+  "people.col.last": "Last record",
 
   /* task statuses */
   "taskStatus.todo": "To do",
@@ -129,6 +136,7 @@ const en: Record<string, string> = {
   "profile.k.leave": "Leave days",
   "profile.k.task": "Task events",
   "profile.k.observation": "Observations",
+  "profile.k.permission": "Permissions",
   "profile.load": "Current load",
   "profile.loadEmpty": "No open tasks — available for new work.",
   "profile.individual": "Individual",
@@ -257,6 +265,11 @@ const en: Record<string, string> = {
   "mev.date": "Date",
   "mev.end": "End date",
   "mev.endHint": "Leave empty for a single day.",
+  "mev.timeFrom": "From (time)",
+  "mev.timeTo": "Back at (time)",
+  "mev.timeHint": "A few hours away — back the same day. While the window runs, they show as on errand.",
+  "mev.timeRequired": "Set both the start and end time.",
+  "mev.timeInvalid": "The end time must be after the start time.",
   "mev.note": "Note",
   "mev.notePh": "Context, details, follow-up…",
   "mev.required": "A short description is required.",
@@ -530,6 +543,7 @@ const fr: Record<string, string> = {
   "status.absent": "Absent",
   "status.sick": "Malade",
   "status.leave": "En congé",
+  "status.errand": "Course",
 
   /* event kinds */
   "kind.commendation": "Félicitation",
@@ -539,6 +553,12 @@ const fr: Record<string, string> = {
   "kind.leave": "Congé",
   "kind.task": "Tâche",
   "kind.observation": "Observation",
+  "kind.permission": "Permission",
+  "people.col.person": "Personne",
+  "people.col.status": "Statut",
+  "people.col.teams": "Équipes",
+  "people.col.task": "Tâche en cours",
+  "people.col.last": "Dernier événement",
 
   /* task statuses */
   "taskStatus.todo": "À faire",
@@ -617,6 +637,7 @@ const fr: Record<string, string> = {
   "profile.k.leave": "Jours de congé",
   "profile.k.task": "Événements de tâche",
   "profile.k.observation": "Observations",
+  "profile.k.permission": "Permissions",
   "profile.load": "Charge actuelle",
   "profile.loadEmpty": "Aucune tâche ouverte — disponible pour un nouveau travail.",
   "profile.individual": "Individuel",
@@ -746,6 +767,11 @@ const fr: Record<string, string> = {
   "mev.date": "Date",
   "mev.end": "Date de fin",
   "mev.endHint": "Laissez vide pour une seule journée.",
+  "mev.timeFrom": "De (heure)",
+  "mev.timeTo": "Retour à (heure)",
+  "mev.timeHint": "Quelques heures d’absence — retour le jour même. Pendant le créneau, la personne apparaît « en course ».",
+  "mev.timeRequired": "Indiquez l’heure de début et l’heure de fin.",
+  "mev.timeInvalid": "L’heure de fin doit être après l’heure de début.",
   "mev.note": "Note",
   "mev.notePh": "Contexte, détails, suivi…",
   "mev.required": "Une courte description est obligatoire.",

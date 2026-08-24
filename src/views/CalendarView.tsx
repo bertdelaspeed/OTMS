@@ -589,6 +589,11 @@ export function CalendarView({
                           <span className="flex-1 min-w-0">
                             <span className="block text-xs font-medium truncate">{p?.name ?? "—"}</span>
                             <span className="block text-[10.5px] text-mut truncate">{e.title}</span>
+                            {e.kind === "permission" && e.timeFrom && e.timeTo && (
+                              <span className="block font-mono text-[10px] text-orchid">
+                                {e.timeFrom} – {e.timeTo}
+                              </span>
+                            )}
                           </span>
                           <Chip className={m.chip}>
                             <m.Icon className="w-3 h-3" /> {t(m.key)}
