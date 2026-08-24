@@ -289,5 +289,6 @@ export async function syncGcal(state: AppState): Promise<SyncResult | null> {
   saveGcalLinks(next);
   cfg.lastSync = new Date().toISOString();
   saveGcalCfg(cfg);
+  window.dispatchEvent(new CustomEvent("rollcall-gcal-synced"));
   return res;
 }
