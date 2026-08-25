@@ -1,5 +1,5 @@
 import type { CellHookData } from "jspdf-autotable";
-import type { EventKind, Person, StatusKey } from "./types";
+import type { EventKind, Person, StatusKey, Team } from "./types";
 import { toISO, todayISO } from "./dates";
 
 /* Heavy libraries (xlsx, jspdf) are loaded on demand so the app opens instantly. */
@@ -39,6 +39,30 @@ export async function downloadPeopleTemplate(): Promise<void> {
   XLSX.utils.book_append_sheet(wb, ws, "People");
   XLSX.utils.book_append_sheet(wb, ws2, "Instructions");
   XLSX.writeFile(wb, "rollcall-people-template.xlsx");
+}
+
+/* ================= Excel export of the current roster ================= */
+
+export async function exportPeopleExcel(people: Person[], teams: Team[]): Promise<void> {
+  const XLSX = await import("xlsx");
+  const header = ["Matricule", "Name", "Role", "Email", "Phone", "Joined (YYYY-MM-DD)", "Teams"];
+  const rows = people.map((p) => [
+    p.matricule ?? "",
+    p.name,
+    p.role ?? "",
+    p.email ?? "",
+    p.phone ?? "",
+    p.joinedAt ?? "",
+    teams
+      .filter((tm) => tm.memberIds.includes(p.id))
+      .map((tm) => tm.name)
+      .join("; "),
+  ]);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 20 }, { wch: 18 }, { wch: 30 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "People");
+  XLSX.writeFile(wb, `rollcall-people-${todayISO()}.xlsx`);
 }
 
 /* ================= Excel parsing ================= */

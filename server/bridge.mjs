@@ -88,6 +88,7 @@ const DDL = [
   `CREATE TABLE IF NOT EXISTS rollcall_people (
      id VARCHAR(40) PRIMARY KEY,
      name TEXT NOT NULL,
+     matricule VARCHAR(64),
      role TEXT,
      email TEXT,
      phone TEXT,
@@ -112,7 +113,8 @@ const DDL = [
      start_date DATE,
      due_date DATE,
      created_at TEXT,
-     completed_at DATE
+     completed_at DATE,
+     archived BOOLEAN
    )`,
   `CREATE TABLE IF NOT EXISTS rollcall_events (
      id VARCHAR(40) PRIMARY KEY,
@@ -122,6 +124,8 @@ const DDL = [
      note TEXT,
      event_date DATE,
      end_date DATE,
+     time_from VARCHAR(8),
+     time_to VARCHAR(8),
      created_at TEXT,
      task_id VARCHAR(40)
    )`,
@@ -129,6 +133,20 @@ const DDL = [
 
 async function ensureSchema(db) {
   for (const stmt of DDL) await db.run(stmt);
+  /* migrations — add columns introduced after the first release */
+  const migrations = [
+    "ALTER TABLE rollcall_people ADD COLUMN matricule VARCHAR(64)",
+    "ALTER TABLE rollcall_tasks ADD COLUMN archived BOOLEAN",
+    "ALTER TABLE rollcall_events ADD COLUMN time_from VARCHAR(8)",
+    "ALTER TABLE rollcall_events ADD COLUMN time_to VARCHAR(8)",
+  ];
+  for (const stmt of migrations) {
+    try {
+      await db.run(stmt);
+    } catch {
+      /* column already exists — ignore */
+    }
+  }
 }
 
 function isoDate(v) {
@@ -161,6 +179,7 @@ async function readState(db) {
     people: people.map((r) => ({
       id: r.id,
       name: r.name ?? "",
+      matricule: r.matricule ?? "",
       role: r.role ?? "",
       email: r.email ?? "",
       phone: r.phone ?? "",
@@ -186,6 +205,7 @@ async function readState(db) {
       dueDate: isoDate(r.due_date) ?? "",
       createdAt: r.created_at ?? "",
       completedAt: isoDate(r.completed_at),
+      archived: !!(r.archived ?? false),
     })),
     events: events.map((r) => ({
       id: r.id,
@@ -195,6 +215,8 @@ async function readState(db) {
       note: r.note ?? "",
       date: isoDate(r.event_date) ?? "",
       endDate: isoDate(r.end_date),
+      timeFrom: r.time_from ?? null,
+      timeTo: r.time_to ?? null,
       createdAt: r.created_at ?? "",
       taskId: r.task_id ?? null,
     })),
@@ -210,8 +232,8 @@ async function writeState(db, state) {
     await db.run("DELETE FROM rollcall_events");
     for (const p of state.people ?? []) {
       await db.run(
-        "INSERT INTO rollcall_people (id, name, role, email, phone, joined_at, hue) VALUES (?,?,?,?,?,?,?)",
-        [p.id, p.name, p.role ?? "", p.email ?? "", p.phone ?? "", p.joinedAt || null, p.hue ?? 150]
+        "INSERT INTO rollcall_people (id, name, matricule, role, email, phone, joined_at, hue) VALUES (?,?,?,?,?,?,?,?)",
+        [p.id, p.name, p.matricule ?? "", p.role ?? "", p.email ?? "", p.phone ?? "", p.joinedAt || null, p.hue ?? 150]
       );
     }
     for (const t of state.teams ?? []) {
@@ -222,7 +244,7 @@ async function writeState(db, state) {
     }
     for (const t of state.tasks ?? []) {
       await db.run(
-        "INSERT INTO rollcall_tasks (id, title, description, team_id, assignee_ids, status, start_date, due_date, created_at, completed_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO rollcall_tasks (id, title, description, team_id, assignee_ids, status, start_date, due_date, created_at, completed_at, archived) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         [
           t.id,
           t.title,
@@ -234,12 +256,13 @@ async function writeState(db, state) {
           t.dueDate || null,
           t.createdAt ?? "",
           t.completedAt ?? null,
+          t.archived ? 1 : 0,
         ]
       );
     }
     for (const e of state.events ?? []) {
       await db.run(
-        "INSERT INTO rollcall_events (id, person_id, kind, title, note, event_date, end_date, created_at, task_id) VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO rollcall_events (id, person_id, kind, title, note, event_date, end_date, time_from, time_to, created_at, task_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         [
           e.id,
           e.personId,
@@ -248,6 +271,8 @@ async function writeState(db, state) {
           e.note ?? "",
           e.date || null,
           e.endDate ?? null,
+          e.timeFrom ?? null,
+          e.timeTo ?? null,
           e.createdAt ?? "",
           e.taskId ?? null,
         ]

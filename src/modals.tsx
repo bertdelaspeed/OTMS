@@ -926,6 +926,9 @@ export function ImportExcelModal({ open, onClose }: { open: boolean; onClose: ()
                     <span className="flex-1 min-w-0">
                       <span className="block font-medium truncate">
                         {r.name}
+                        {r.matricule && (
+                          <span className="ml-1.5 font-mono text-[10px] text-dim">{r.matricule}</span>
+                        )}
                         {dupe && <span className="text-dim font-normal"> · {t("import.modeAdd")}</span>}
                       </span>
                       <span className="block text-[11px] text-mut truncate">

@@ -182,6 +182,12 @@ const en: Record<string, string> = {
   "tasks.tab.active": "In progress",
   "tasks.tab.done": "Done",
   "tasks.tab.late": "Overdue",
+  "tasks.tab.archived": "Archived",
+  "tasks.archive": "Archive",
+  "tasks.restore": "Restore",
+  "tasks.archivedChip": "archived",
+  "tasks.archivedToast": "\"{t}\" archived — filed out of the working list",
+  "tasks.restoredToast": "\"{t}\" restored to the list",
   "tasks.emptyTitle": "Nothing on the books",
   "tasks.emptyBody":
     "Create a task with a work period, point it at a team, and everyone involved gets it on their record automatically.",
@@ -301,8 +307,10 @@ const en: Record<string, string> = {
   "cal.outToday": "{n} out today",
   "cal.plannedToday": "Planned today",
 
-  /* Excel import */
+  /* Excel import / export */
   "people.import": "Import Excel",
+  "people.export": "Export Excel",
+  "people.exported": "Personnel list exported as .xlsx",
   "import.title": "Import from Excel",
   "import.sub": "Bulk-add the whole roster from a spreadsheet file.",
   "import.template": "Download the template",
@@ -686,6 +694,12 @@ const fr: Record<string, string> = {
   "tasks.tab.active": "En cours",
   "tasks.tab.done": "Terminées",
   "tasks.tab.late": "En retard",
+  "tasks.tab.archived": "Archivées",
+  "tasks.archive": "Archiver",
+  "tasks.restore": "Restaurer",
+  "tasks.archivedChip": "archivée",
+  "tasks.archivedToast": "« {t} » archivée — retirée de la liste de travail",
+  "tasks.restoredToast": "« {t} » restaurée dans la liste",
   "tasks.emptyTitle": "Rien au programme",
   "tasks.emptyBody":
     "Créez une tâche avec une période de travail, affectez-la à une équipe, et chaque personne concernée la verra automatiquement dans son registre.",
@@ -805,8 +819,10 @@ const fr: Record<string, string> = {
   "cal.outToday": "{n} absent(s) aujourd’hui",
   "cal.plannedToday": "Prévu aujourd’hui",
 
-  /* import Excel */
+  /* import / export Excel */
   "people.import": "Importer Excel",
+  "people.export": "Exporter Excel",
+  "people.exported": "Liste du personnel exportée en .xlsx",
   "import.title": "Importer depuis Excel",
   "import.sub": "Ajoutez tout l’effectif d’un coup depuis un tableur.",
   "import.template": "Télécharger le modèle",
