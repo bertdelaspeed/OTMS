@@ -8,13 +8,13 @@ import { toISO, todayISO } from "./dates";
 
 export async function downloadPeopleTemplate(): Promise<void> {
   const XLSX = await import("xlsx");
-  const header = ["Name *", "Role", "Email", "Phone", "Joined (YYYY-MM-DD)", "Teams (; separated)"];
+  const header = ["Matricule", "Name *", "Role", "Email", "Phone", "Joined (YYYY-MM-DD)", "Teams (; separated)"];
   const rows = [
-    ["Awa Cissé", "Office assistant", "awa.cisse@company.co", "+221 77 555 01 02", "2025-03-10", "Back Office; Field Ops"],
-    ["Karim Haddad", "Archivist", "karim.haddad@company.co", "+212 661 22 33 44", "2024-11-02", "Back Office"],
+    ["EMP-0142", "Awa Cissé", "Office assistant", "awa.cisse@company.co", "+221 77 555 01 02", "2025-03-10", "Back Office; Field Ops"],
+    ["EMP-0157", "Karim Haddad", "Archivist", "karim.haddad@company.co", "+212 661 22 33 44", "2024-11-02", "Back Office"],
   ];
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  ws["!cols"] = [{ wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 20 }, { wch: 20 }, { wch: 30 }];
+  ws["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 20 }, { wch: 20 }, { wch: 30 }];
 
   const ws2 = XLSX.utils.aoa_to_sheet([
     ["ROLLCALL — PEOPLE IMPORT / IMPORT DE PERSONNEL"],
@@ -45,6 +45,7 @@ export async function downloadPeopleTemplate(): Promise<void> {
 
 export interface ParsedRow {
   name: string;
+  matricule: string;
   role: string;
   email: string;
   phone: string;
@@ -70,6 +71,20 @@ const normHeader = (s: string) =>
 
 const HEADER_MAP: Record<string, string[]> = {
   name: ["name", "fullname", "employeename", "employe", "agent", "nom", "nomcomplet"],
+  matricule: [
+    "matricule",
+    "matriculeno",
+    "matriculenumber",
+    "employeenumber",
+    "employeeno",
+    "employeeid",
+    "staffid",
+    "staffnumber",
+    "badgeno",
+    "badgenumber",
+    "numero",
+    "nummatricule",
+  ],
   role: ["role", "position", "jobtitle", "job", "title", "poste", "fonction", "titre"],
   email: ["email", "emailaddress", "mail", "courriel"],
   phone: ["phone", "telephone", "tel", "mobile", "portable", "numero"],
@@ -167,6 +182,7 @@ export async function parsePeopleExcel(
 
     rows.push({
       name,
+      matricule: get("matricule"),
       role: get("role"),
       email: get("email"),
       phone: get("phone"),
@@ -231,6 +247,7 @@ export interface PdfLabels {
   contact: string;
   position: string;
   history: string;
+  matricule: string;
   role: string;
   teams: string;
   joined: string;
@@ -302,6 +319,18 @@ export async function exportPersonPdf(input: {
   doc.setLineWidth(1);
   doc.roundedRect(M, 148, sw, 20, 10, 10, "S");
   doc.text(input.statusLabel.toUpperCase(), M + 11, 161, { charSpace: 0.8 });
+
+  if (person.matricule) {
+    doc.setFont("courier", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...MUT);
+    const matText = `${labels.matricule.toUpperCase()}  ${person.matricule}`;
+    const mw = doc.getTextWidth(matText) + 22;
+    doc.setDrawColor(...LINE);
+    doc.roundedRect(M + sw + 10, 148, mw, 20, 10, 10, "S");
+    doc.text(matText, M + sw + 21, 161);
+    doc.setFont("helvetica", "normal");
+  }
 
   /* meta block */
   const metaY = 196;
