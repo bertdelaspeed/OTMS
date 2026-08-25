@@ -19,6 +19,7 @@ export type TaskStatus = "todo" | "active" | "done";
 export interface Person {
   id: string;
   name: string;
+  matricule: string;
   role: string;
   email: string;
   phone: string;

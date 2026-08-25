@@ -29,6 +29,7 @@ export function PersonModal({
   const { push } = useToast();
 
   const [name, setName] = useState("");
+  const [matricule, setMatricule] = useState("");
   const [role, setRole] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,6 +40,7 @@ export function PersonModal({
   useEffect(() => {
     if (!open) return;
     setName(person?.name ?? "");
+    setMatricule(person?.matricule ?? "");
     setRole(person?.role ?? "");
     setEmail(person?.email ?? "");
     setPhone(person?.phone ?? "");
@@ -52,6 +54,7 @@ export function PersonModal({
     if (!name.trim()) return setErr(t("mp.nameRequired"));
     const clean = {
       name: name.trim(),
+      matricule: matricule.trim(),
       role: role.trim(),
       email: email.trim(),
       phone: phone.trim(),
@@ -90,9 +93,19 @@ export function PersonModal({
         <Field label={t("mp.name")} error={err}>
           <TextInput autoFocus value={name} placeholder={t("mp.namePh")} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label={t("mp.role")}>
-          <TextInput value={role} placeholder={t("mp.rolePh")} onChange={(e) => setRole(e.target.value)} />
-        </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label={t("mp.role")}>
+            <TextInput value={role} placeholder={t("mp.rolePh")} onChange={(e) => setRole(e.target.value)} />
+          </Field>
+          <Field label={`${t("mp.matricule")} · ${t("common.optional")}`}>
+            <TextInput
+              value={matricule}
+              placeholder={t("mp.matriculePh")}
+              onChange={(e) => setMatricule(e.target.value)}
+              className="font-mono"
+            />
+          </Field>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label={t("mp.email")}>
             <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -755,6 +768,7 @@ export function ImportExcelModal({ open, onClose }: { open: boolean; onClose: ()
         person: {
           id: uid(),
           name: r.name,
+          matricule: r.matricule,
           role: r.role,
           email: r.email,
           phone: r.phone,

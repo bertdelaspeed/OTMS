@@ -18,23 +18,24 @@ export function seedState(): AppState {
   const person = (
     id: string,
     name: string,
+    matricule: string,
     role: string,
     email: string,
     phone: string,
     joinedDaysAgo: number,
     hue: number
-  ): Person => ({ id, name, role, email, phone, joinedAt: d(-joinedDaysAgo), hue });
+  ): Person => ({ id, name, matricule, role, email, phone, joinedAt: d(-joinedDaysAgo), hue });
 
   const people: Person[] = [
-    person("p-amara", "Amara Diallo", "Senior Client Officer", "amara.diallo@office.co", "+221 77 512 0931", 742, 152),
-    person("p-jonas", "Jonas Weber", "Operations Associate", "jonas.weber@office.co", "+49 160 442 7810", 511, 28),
-    person("p-priya", "Priya Nair", "Records Clerk", "priya.nair@office.co", "+91 98 4701 2236", 388, 268),
-    person("p-tomas", "Tomás Rivera", "Field Agent", "tomas.rivera@office.co", "+34 612 884 207", 295, 200),
-    person("p-lena", "Lena Kovács", "Compliance Analyst", "lena.kovacs@office.co", "+36 30 998 1154", 240, 340),
-    person("p-samuel", "Samuel Okafor", "Field Agent", "samuel.okafor@office.co", "+234 803 556 9012", 173, 88),
-    person("p-ingrid", "Ingrid Halvorsen", "Front Desk", "ingrid.halvorsen@office.co", "+47 912 44 738", 129, 12),
-    person("p-marco", "Marco Bianchi", "Logistics Coordinator", "marco.bianchi@office.co", "+39 333 201 8845", 76, 220),
-    person("p-aisha", "Aisha Bello", "Junior Analyst", "aisha.bello@office.co", "+233 24 887 3361", 34, 56),
+    person("p-amara", "Amara Diallo", "RC-1042", "Senior Client Officer", "amara.diallo@office.co", "+221 77 512 0931", 742, 152),
+    person("p-jonas", "Jonas Weber", "RC-0871", "Operations Associate", "jonas.weber@office.co", "+49 160 442 7810", 511, 28),
+    person("p-priya", "Priya Nair", "RC-1156", "Records Clerk", "priya.nair@office.co", "+91 98 4701 2236", 388, 268),
+    person("p-tomas", "Tomás Rivera", "RC-1203", "Field Agent", "tomas.rivera@office.co", "+34 612 884 207", 295, 200),
+    person("p-lena", "Lena Kovács", "RC-1288", "Compliance Analyst", "lena.kovacs@office.co", "+36 30 998 1154", 240, 340),
+    person("p-samuel", "Samuel Okafor", "RC-1342", "Field Agent", "samuel.okafor@office.co", "+234 803 556 9012", 173, 88),
+    person("p-ingrid", "Ingrid Halvorsen", "RC-1415", "Front Desk", "ingrid.halvorsen@office.co", "+47 912 44 738", 129, 12),
+    person("p-marco", "Marco Bianchi", "RC-1478", "Logistics Coordinator", "marco.bianchi@office.co", "+39 333 201 8845", 76, 220),
+    person("p-aisha", "Aisha Bello", "RC-1531", "Junior Analyst", "aisha.bello@office.co", "+233 24 887 3361", 34, 56),
   ];
 
   const teams: Team[] = [
