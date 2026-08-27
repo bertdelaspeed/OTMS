@@ -4,8 +4,9 @@ import { activeTasksFor, personLastEvent, personStatus, teamsOf, useStore } from
 import { STATUS_META, STATUS_ORDER, TEAM_COLORS, KIND_META } from "../meta";
 import { fmtDate } from "../dates";
 import { Avatar, Chip, DangerAction, EmptyState, StatusPill, TextInput, btnGhost, btnIcon, btnPrimary, panelCls, useToast } from "../ui";
-import { IconBriefcase, IconChevronRight, IconPencil, IconSearch, IconUpload, IconUserPlus, IconUsers } from "../icons";
+import { IconBriefcase, IconChevronRight, IconDownload, IconPencil, IconSearch, IconUpload, IconUserPlus, IconUsers } from "../icons";
 import { ImportExcelModal, PersonModal } from "../modals";
+import { exportPeopleExcel } from "../exports";
 import { useI18n } from "../i18n";
 
 type Filter = StatusKey | "all";
@@ -65,6 +66,14 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
           <p className="text-mut text-sm mt-2">{tp("people.sub", state.people.length)}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            className={btnGhost}
+            onClick={() => {
+              void exportPeopleExcel(state.people, state.teams).then(() => push(t("people.exported")));
+            }}
+          >
+            <IconDownload className="w-4 h-4" /> {t("people.export")}
+          </button>
           <button className={btnGhost} onClick={() => setImportOpen(true)}>
             <IconUpload className="w-4 h-4" /> {t("people.import")}
           </button>
@@ -154,7 +163,14 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
               <div className="flex items-center gap-3 flex-1 min-w-0 md:flex-none md:min-w-0">
                 <Avatar name={r.p.name} hue={r.p.hue} size={38} className="shrink-0" />
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm leading-snug break-words">{r.p.name}</p>
+                  <p className="font-semibold text-sm leading-snug break-words">
+                    {r.p.name}
+                    {r.p.matricule && (
+                      <span className="ml-2 align-middle inline-block rounded border border-line2 bg-panel2/70 px-1.5 py-px font-mono text-[9.5px] font-normal tracking-wide text-mut">
+                        {r.p.matricule}
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-mut leading-snug break-words mt-0.5">{r.p.role}</p>
                 </div>
               </div>

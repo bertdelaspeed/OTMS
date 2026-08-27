@@ -130,6 +130,14 @@ export const IconServer = (p: P) => (
   </svg>
 );
 
+export const IconArchive = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="4" width="18" height="5" rx="1" />
+    <path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9" />
+    <path d="M10 13h4" />
+  </svg>
+);
+
 export const IconFilter = (p: P) => (
   <svg {...base} {...p}>
     <path d="M22 4H2l8 9.5V20l4 2v-8.5L22 4z" />

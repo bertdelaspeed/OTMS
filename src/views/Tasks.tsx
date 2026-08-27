@@ -11,15 +11,16 @@ import {
   EmptyState,
   StatusSegments,
   TextInput,
+  btnIcon,
   btnPrimary,
   panelCls,
   useToast,
 } from "../ui";
-import { IconListChecks, IconPlus, IconSearch } from "../icons";
+import { IconArchive, IconListChecks, IconPlus, IconRefresh, IconSearch } from "../icons";
 import { TaskModal } from "../modals";
 import { useI18n } from "../i18n";
 
-type Tab = "all" | "todo" | "active" | "done" | "late";
+type Tab = "all" | "todo" | "active" | "done" | "late" | "archived";
 
 const DUE_TONE_CLS: Record<string, string> = {
   late: "text-coral bg-coral/10 border-coral/30",
@@ -63,16 +64,22 @@ export function Tasks() {
     [state, today]
   );
 
+  const live = rows.filter((r) => !r.task.archived);
+  const archivedRows = rows.filter((r) => r.task.archived);
+
   const counts: Record<Tab, number> = {
-    all: rows.length,
-    todo: rows.filter((r) => r.task.status === "todo").length,
-    active: rows.filter((r) => r.task.status === "active").length,
-    done: rows.filter((r) => r.task.status === "done").length,
-    late: rows.filter((r) => r.overdue).length,
+    all: live.length,
+    todo: live.filter((r) => r.task.status === "todo").length,
+    active: live.filter((r) => r.task.status === "active").length,
+    done: live.filter((r) => r.task.status === "done").length,
+    late: live.filter((r) => r.overdue).length,
+    archived: archivedRows.length,
   };
 
   const visible = rows
     .filter((r) => {
+      if (tab === "archived") return !!r.task.archived;
+      if (r.task.archived) return false;
       if (tab === "late") return r.overdue;
       if (tab === "all") return true;
       return r.task.status === tab;
@@ -105,12 +112,23 @@ export function Tasks() {
     push(t("tasks.deleted", { t: task.title }), "warn");
   };
 
+  const archive = (task: Task) => {
+    dispatch({ type: "SET_TASK_ARCHIVED", id: task.id, archived: true });
+    push(t("tasks.archivedToast", { t: task.title }));
+  };
+
+  const restore = (task: Task) => {
+    dispatch({ type: "SET_TASK_ARCHIVED", id: task.id, archived: false });
+    push(t("tasks.restoredToast", { t: task.title }));
+  };
+
   const TABS: { key: Tab; label: string; dot?: string }[] = [
     { key: "all", label: t("tasks.tab.all") },
     { key: "todo", label: t("tasks.tab.todo"), dot: "bg-sky" },
     { key: "active", label: t("tasks.tab.active"), dot: "bg-amber" },
     { key: "done", label: t("tasks.tab.done"), dot: "bg-mint" },
     { key: "late", label: t("tasks.tab.late"), dot: "bg-coral" },
+    { key: "archived", label: t("tasks.tab.archived"), dot: "bg-sage" },
   ];
 
   return (
@@ -187,17 +205,27 @@ export function Tasks() {
           {visible.map((r, i) => {
             const due = dueLabel(r.task.dueDate);
             const done = r.task.status === "done";
+            const isArchived = !!r.task.archived;
             return (
               <div
                 key={r.task.id}
                 onClick={() => setModal({ task: r.task })}
-                className="reveal group flex flex-wrap sm:flex-nowrap items-center gap-3 px-3.5 sm:px-4 py-3.5 hover:bg-panel2/60 cursor-pointer transition-colors border-b border-line last:border-b-0"
+                className={`reveal group flex flex-wrap sm:flex-nowrap items-center gap-3 px-3.5 sm:px-4 py-3.5 hover:bg-panel2/60 cursor-pointer transition-colors border-b border-line last:border-b-0 ${
+                  isArchived ? "opacity-60 hover:opacity-90" : ""
+                }`}
                 style={{ animationDelay: `${Math.min(i * 45, 400)}ms` }}
               >
-                <StatusSegments value={r.task.status} onChange={(s) => setStatus(r.task, s)} />
+                {!isArchived && (
+                  <StatusSegments value={r.task.status} onChange={(s) => setStatus(r.task, s)} />
+                )}
                 <div className="flex-1 min-w-[200px]">
-                  <p className={`text-sm font-semibold leading-tight ${done ? "line-through decoration-line2 text-mut" : ""}`}>
+                  <p className={`text-sm font-semibold leading-tight ${done || isArchived ? "line-through decoration-line2 text-mut" : ""}`}>
                     {r.task.title}
+                    {isArchived && (
+                      <span className="ml-2 align-middle inline-block rounded border border-sage/40 bg-sage/10 px-1.5 py-px font-mono text-[9.5px] font-normal tracking-wide text-sage">
+                        {t("tasks.archivedChip")}
+                      </span>
+                    )}
                   </p>
                   <p className="text-[11px] text-mut truncate mt-0.5">
                     <span className="font-mono text-dim">
@@ -236,13 +264,44 @@ export function Tasks() {
                 </div>
                 <Chip
                   className={`w-[116px] justify-center shrink-0 ${
-                    done ? "text-mint bg-mint/10 border-mint/30" : DUE_TONE_CLS[due.tone]
+                    isArchived
+                      ? "text-sage bg-sage/10 border-sage/30"
+                      : done
+                      ? "text-mint bg-mint/10 border-mint/30"
+                      : DUE_TONE_CLS[due.tone]
                   }`}
                 >
-                  {done
+                  {isArchived
+                    ? t("tasks.tab.archived")
+                    : done
                     ? t("tasks.doneOn", { d: r.task.completedAt ? fmtDate(r.task.completedAt) : "" })
                     : due.text}
                 </Chip>
+                {isArchived ? (
+                  <button
+                    className={`${btnIcon} hover:text-mint`}
+                    title={t("tasks.restore")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      restore(r.task);
+                    }}
+                  >
+                    <IconRefresh className="w-4 h-4" />
+                  </button>
+                ) : (
+                  done && (
+                    <button
+                      className={`${btnIcon} hover:text-sage`}
+                      title={t("tasks.archive")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        archive(r.task);
+                      }}
+                    >
+                      <IconArchive className="w-4 h-4" />
+                    </button>
+                  )
+                )}
                 <DangerAction onConfirm={() => remove(r.task)} label={t("tasks.deleted", { t: r.task.title })} />
               </div>
             );

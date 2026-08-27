@@ -19,6 +19,7 @@ export type TaskStatus = "todo" | "active" | "done";
 export interface Person {
   id: string;
   name: string;
+  matricule: string;
   role: string;
   email: string;
   phone: string;
@@ -46,6 +47,7 @@ export interface Task {
   dueDate: string; // ISO date — work period end / deadline
   createdAt: string; // ISO datetime
   completedAt: string | null;
+  archived?: boolean; // completed tasks filed away from the working list
 }
 
 export interface PersonEvent {

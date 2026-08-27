@@ -25,6 +25,7 @@ export type Action =
   | { type: "ADD_TASK"; task: Task }
   | { type: "UPDATE_TASK"; task: Task; prev: Task }
   | { type: "SET_TASK_STATUS"; id: string; status: TaskStatus }
+  | { type: "SET_TASK_ARCHIVED"; id: string; archived: boolean }
   | { type: "REMOVE_TASK"; id: string }
   | { type: "ADD_EVENT"; event: PersonEvent }
   | { type: "REMOVE_EVENT"; id: string }
@@ -167,6 +168,11 @@ function reducer(state: AppState, a: Action): AppState {
       if (a.status === "done") events = [...events, ...completionEvents(state, task)];
       return { ...state, tasks: state.tasks.map((t) => (t.id === a.id ? updated : t)), events };
     }
+    case "SET_TASK_ARCHIVED":
+      return {
+        ...state,
+        tasks: state.tasks.map((t) => (t.id === a.id ? { ...t, archived: a.archived } : t)),
+      };
     case "REMOVE_TASK":
       return { ...state, tasks: state.tasks.filter((t) => t.id !== a.id) };
     case "ADD_EVENT":

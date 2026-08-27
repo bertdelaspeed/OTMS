@@ -132,6 +132,7 @@ export function Profile({
         contact: t("pdf.contact"),
         position: t("pdf.position"),
         history: t("pdf.history"),
+        matricule: t("mp.matricule"),
         role: t("pdf.role"),
         teams: t("pdf.teams"),
         joined: t("profile.joined"),
@@ -179,6 +180,11 @@ export function Profile({
                 {person.name}
               </h1>
               <StatusPill status={status.key} pulse />
+              {person.matricule && (
+                <Chip className="text-mut bg-panel2 border-line2 font-mono tracking-wide">
+                  {person.matricule}
+                </Chip>
+              )}
             </div>
             <p className="text-mut text-sm mt-2">
               {person.role}
