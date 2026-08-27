@@ -5,7 +5,6 @@ import { StoreProvider, useStore } from "./store";
 import { ToastProvider, btnIcon, useToast } from "./ui";
 import { I18nProvider, useI18n } from "./i18n";
 import type { Lang } from "./i18n";
-import { seedState } from "./data";
 import { fmtDateFull, getLocale, relTime, todayISO } from "./dates";
 import { gcalConnected, loadGcalCfg, saveGcalCfg, syncGcal } from "./gcal";
 import type { DbConfig } from "./remotes";
@@ -28,7 +27,6 @@ import {
   IconGlobe,
   IconListChecks,
   IconLogo,
-  IconRefresh,
   IconUpload,
   IconUsers,
 } from "./icons";
@@ -87,7 +85,6 @@ function Shell() {
   const [view, setView] = useState<ViewKey>("dashboard");
   const [personId, setPersonId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
-  const [armed, setArmed] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [dbCfg, setDbCfg] = useState<DbConfig>(loadDbConfig);
   const [lastSync, setLastSync] = useState<string | null>(loadLastSync);
@@ -98,12 +95,6 @@ function Shell() {
     const i = window.setInterval(() => setNow(new Date()), 30000);
     return () => window.clearInterval(i);
   }, []);
-
-  useEffect(() => {
-    if (!armed) return;
-    const timer = window.setTimeout(() => setArmed(false), 2600);
-    return () => window.clearTimeout(timer);
-  }, [armed]);
 
   /* auto-mirror tasks to Google Calendar when enabled */
   const tasksSig = state.tasks
@@ -167,12 +158,6 @@ function Shell() {
     : view === "dashboard"
     ? t("crumb.rollcall")
     : t(NAV.find((n) => n.key === view)!.labelKey);
-
-  const doReset = () => {
-    dispatch({ type: "RESET", state: seedState() });
-    setArmed(false);
-    push(t("data.resetDone"));
-  };
 
   const doExport = () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -277,20 +262,6 @@ function Shell() {
               onClick={() => fileRef.current?.click()}
             >
               <IconUpload className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => (armed ? doReset() : setArmed(true))}
-              title={t("data.reset")}
-              className={`col-span-1 md:col-span-2 inline-flex items-center justify-center gap-2 rounded-lg border h-8 px-2 text-[11px] font-semibold transition-all duration-150 ${
-                armed
-                  ? "border-coral/50 bg-coral/10 text-coral"
-                  : "border-line2 text-mut hover:text-ink hover:bg-panel2"
-              }`}
-            >
-              <IconRefresh className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden md:inline truncate">
-                {armed ? t("data.resetConfirm") : t("data.reset")}
-              </span>
             </button>
           </div>
           <input
