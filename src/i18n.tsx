@@ -1045,8 +1045,8 @@ function interpolate(s: string, vars?: Record<string, string | number>): string 
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Lang>(() => {
-    const saved = (localStorage.getItem("rollcall.lang") as Lang | null) ?? "en";
-    const l: Lang = saved === "fr" ? "fr" : "en";
+    const saved = (localStorage.getItem("rollcall.lang") as Lang | null) ?? "fr";
+    const l: Lang = saved === "en" ? "en" : "fr";
     setDateLocale(l);
     return l;
   });

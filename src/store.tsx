@@ -9,7 +9,7 @@ import type {
   TaskStatus,
   Team,
 } from "./types";
-import { seedState, uid } from "./data";
+import { uid } from "./data";
 import { nowInWindow, todayISO } from "./dates";
 
 const KEY = "rollcall.state.v2";
@@ -208,9 +208,9 @@ function load(): AppState {
       if (s && Array.isArray(s.people) && Array.isArray(s.events)) return normalize(s);
     }
   } catch {
-    /* corrupted storage — fall through to seed */
+    /* corrupted storage — fall through to a clean slate */
   }
-  return seedState();
+  return { people: [], teams: [], tasks: [], events: [] };
 }
 
 const StoreCtx = createContext<{ state: AppState; dispatch: Dispatch<Action> } | null>(null);
