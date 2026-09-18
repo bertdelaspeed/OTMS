@@ -10,6 +10,7 @@ import {
   DangerAction,
   EmptyState,
   StatusPill,
+  StatusSegments,
   btnGhost,
   btnPrimary,
   panelCls,
@@ -273,20 +274,28 @@ export function Profile({
               const due = dueLabel(task.dueDate);
               const team = state.teams.find((x) => x.id === task.teamId);
               return (
-                <div key={task.id} className="flex items-center gap-2.5 px-2 py-2.5 rounded-lg hover:bg-panel2/70 transition-colors">
-                  <IconBriefcase
-                    className={`w-4 h-4 shrink-0 ${task.status === "active" ? "text-amber" : "text-sky"}`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate leading-tight">{task.title}</p>
-                    <p className="text-[11px] text-mut truncate">
-                      {team?.name ?? t("profile.individual")} ·{" "}
-                      <span className="font-mono">
-                        {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
-                      </span>
-                    </p>
+                <div key={task.id} className="flex flex-col gap-2 px-2 py-2.5 rounded-lg hover:bg-panel2/70 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <IconBriefcase
+                      className={`w-4 h-4 shrink-0 ${task.status === "active" ? "text-amber" : "text-sky"}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate leading-tight">{task.title}</p>
+                      <p className="text-[11px] text-mut truncate">
+                        {team?.name ?? t("profile.individual")} ·{" "}
+                        <span className="font-mono">
+                          {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
+                        </span>
+                      </p>
+                    </div>
+                    <Chip className={DUE_TONE_CLS[due.tone]}>{due.text}</Chip>
                   </div>
-                  <Chip className={DUE_TONE_CLS[due.tone]}>{due.text}</Chip>
+                  <div className="flex items-center gap-1 ml-6">
+                    <StatusSegments
+                      value={task.status}
+                      onChange={(s) => dispatch({ type: "SET_TASK_STATUS", id: task.id, status: s })}
+                    />
+                  </div>
                 </div>
               );
             })}
