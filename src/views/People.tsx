@@ -3,7 +3,7 @@ import type { Person, StatusKey } from "../types";
 import { activeTasksFor, personLastEvent, personStatus, teamsOf, useStore } from "../store";
 import { STATUS_META, STATUS_ORDER, TEAM_COLORS, KIND_META } from "../meta";
 import { fmtDate } from "../dates";
-import { Avatar, Chip, DangerAction, EmptyState, StatusPill, TextInput, btnGhost, btnIcon, btnPrimary, panelCls, useToast } from "../ui";
+import { Avatar, Chip, DangerAction, EmptyState, StatusPill, StatusSegments, TextInput, btnGhost, btnIcon, btnPrimary, panelCls, useToast } from "../ui";
 import { IconBriefcase, IconChevronRight, IconDownload, IconPencil, IconSearch, IconUpload, IconUserPlus, IconUsers } from "../icons";
 import { ImportExcelModal, PersonModal } from "../modals";
 import { exportPeopleExcel } from "../exports";
@@ -56,6 +56,10 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
   const remove = (p: Person) => {
     dispatch({ type: "REMOVE_PERSON", id: p.id });
     push(t("people.removed", { name: p.name }), "warn");
+  };
+
+  const setTaskStatus = (taskId: string, status: "todo" | "active" | "done") => {
+    dispatch({ type: "SET_TASK_STATUS", id: taskId, status });
   };
 
   return (
@@ -192,19 +196,27 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
                 )}
               </div>
 
-              <div className="hidden lg:flex items-start gap-1.5 min-w-0 text-xs">
+              <div className="hidden lg:flex flex-col gap-1.5 min-w-0 text-xs">
                 {r.load.length === 0 ? (
                   <span className="text-dim">{t("people.noActive")}</span>
                 ) : (
                   <>
-                    <IconBriefcase className="w-3.5 h-3.5 text-amber shrink-0 mt-px" />
-                    <span
-                      className="text-mut leading-snug line-clamp-2 break-words"
-                      title={r.load.map((x) => x.title).join(", ")}
-                    >
-                      {r.load[0].title}
-                      {r.load.length > 1 && ` +${r.load.length - 1}`}
-                    </span>
+                    <div className="flex items-start gap-1.5">
+                      <IconBriefcase className="w-3.5 h-3.5 text-amber shrink-0 mt-px" />
+                      <span
+                        className="text-mut leading-snug line-clamp-2 break-words"
+                        title={r.load.map((x) => x.title).join(", ")}
+                      >
+                        {r.load[0].title}
+                        {r.load.length > 1 && ` +${r.load.length - 1}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <StatusSegments
+                        value={r.load[0].status}
+                        onChange={(s) => setTaskStatus(r.load[0].id, s)}
+                      />
+                    </div>
                   </>
                 )}
               </div>

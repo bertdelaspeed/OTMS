@@ -25,12 +25,45 @@ import {
   IconCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconCopy,
   IconFilter,
   IconListChecks,
   IconStar,
   IconX,
 } from "../icons";
 import { useI18n } from "../i18n";
+
+function CopyableText({ text, className = "" }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  return (
+    <div className={`group relative flex items-start gap-1.5 ${className}`}>
+      <span className="flex-1 break-words">{text}</span>
+      <button
+        onClick={handleCopy}
+        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-panel2 rounded"
+        title="Copy to clipboard"
+      >
+        {copied ? (
+          <IconCheck className="w-3 h-3 text-mint" />
+        ) : (
+          <IconCopy className="w-3 h-3 text-dim hover:text-ink" />
+        )}
+      </button>
+    </div>
+  );
+}
 
 type Period = "week" | "month";
 
@@ -624,13 +657,13 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
                     {agg.completed.map((x) => {
                       const team = state.teams.find((tm) => tm.id === x.teamId);
                       return (
-                        <div key={x.id} className="flex items-center gap-2 px-2 py-1.5">
-                          <IconCheck className="w-3.5 h-3.5 text-mint shrink-0" />
-                          <span className="flex-1 text-[13px] truncate">{x.title}</span>
-                          <span className="font-mono text-[10px] text-dim shrink-0">
+                        <div key={x.id} className="flex items-start gap-2 px-2 py-1.5">
+                          <IconCheck className="w-3.5 h-3.5 text-mint shrink-0 mt-0.5" />
+                          <CopyableText text={x.title} className="flex-1 text-[13px]" />
+                          <span className="font-mono text-[10px] text-dim shrink-0 mt-0.5">
                             {x.completedAt ? fmtDate(x.completedAt) : ""}
                           </span>
-                          {team && <span className={`w-2 h-2 rounded-full shrink-0 ${TEAM_COLORS[team.color].dot}`} />}
+                          {team && <span className={`w-2 h-2 rounded-full shrink-0 mt-1 ${TEAM_COLORS[team.color].dot}`} />}
                         </div>
                       );
                     })}
@@ -645,11 +678,11 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
                     {agg.assigned.map((x) => {
                       const team = state.teams.find((tm) => tm.id === x.teamId);
                       return (
-                        <div key={x.id} className="flex items-center gap-2 px-2 py-1.5">
-                          <IconCalendar className="w-3.5 h-3.5 text-sky shrink-0" />
-                          <span className="flex-1 text-[13px] truncate">{x.title}</span>
-                          <span className="font-mono text-[10px] text-dim shrink-0">{fmtDate(x.dueDate)}</span>
-                          {team && <span className={`w-2 h-2 rounded-full shrink-0 ${TEAM_COLORS[team.color].dot}`} />}
+                        <div key={x.id} className="flex items-start gap-2 px-2 py-1.5">
+                          <IconCalendar className="w-3.5 h-3.5 text-sky shrink-0 mt-0.5" />
+                          <CopyableText text={x.title} className="flex-1 text-[13px]" />
+                          <span className="font-mono text-[10px] text-dim shrink-0 mt-0.5">{fmtDate(x.dueDate)}</span>
+                          {team && <span className={`w-2 h-2 rounded-full shrink-0 mt-1 ${TEAM_COLORS[team.color].dot}`} />}
                         </div>
                       );
                     })}

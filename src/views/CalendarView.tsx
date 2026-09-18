@@ -19,7 +19,7 @@ import {
   weekdayShort,
 } from "../dates";
 import { Avatar, Chip, Segmented, btnGhost, btnIcon, panelCls } from "../ui";
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconListChecks, IconPlus } from "../icons";
+import { IconCalendar, IconCheck, IconChevronLeft, IconChevronRight, IconListChecks, IconPlus } from "../icons";
 import { EventModal, TaskModal } from "../modals";
 import { useI18n } from "../i18n";
 import type { ViewKey } from "../types";
@@ -28,6 +28,7 @@ type Mode = "week" | "month" | "year";
 
 interface DayItems {
   tasks: Task[];
+  completed: Task[];
   ranges: PersonEvent[];
   marks: PersonEvent[];
 }
@@ -36,11 +37,14 @@ function itemsForDay(state: AppState, day: string): DayItems {
   const tasks = state.tasks
     .filter((t) => t.status !== "done" && t.startDate <= day && day <= t.dueDate)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const completed = state.tasks
+    .filter((t) => t.status === "done" && t.completedAt === day)
+    .sort((a, b) => a.title.localeCompare(b.title));
   const ranges = state.events.filter(
     (e) => RANGE_KINDS.includes(e.kind) && e.date <= day && (e.endDate ?? e.date) >= day
   );
   const marks = state.events.filter((e) => e.date === day && !RANGE_KINDS.includes(e.kind));
-  return { tasks, ranges, marks };
+  return { tasks, completed, ranges, marks };
 }
 
 export function CalendarView({
@@ -325,6 +329,21 @@ export function CalendarView({
                             </span>
                           );
                         })}
+                        {it.completed.slice(0, 2).map((task) => {
+                          const team = state.teams.find((x) => x.id === task.teamId);
+                          const color = team ? TEAM_COLORS[team.color].solid : "#93a897";
+                          return (
+                            <span
+                              key={task.id}
+                              title={`${task.title} (${t("taskStatus.done")})`}
+                              className="flex items-center gap-1 border-l-2 rounded-r-md bg-mint/10 px-1.5 py-1 text-[10.5px] leading-tight font-medium truncate opacity-70"
+                              style={{ borderLeftColor: color }}
+                            >
+                              <IconCheck className="w-3 h-3 text-mint shrink-0" />
+                              <span className="truncate">{task.title}</span>
+                            </span>
+                          );
+                        })}
                         {it.ranges.slice(0, 2).map((e) => {
                           const p = selPerson(e.personId);
                           const m = KIND_META[e.kind];
@@ -417,6 +436,21 @@ export function CalendarView({
                             </span>
                           );
                         })}
+                        {it.completed.slice(0, 1).map((task) => {
+                          const team = state.teams.find((x) => x.id === task.teamId);
+                          const color = team ? TEAM_COLORS[team.color].solid : "#93a897";
+                          return (
+                            <span
+                              key={task.id}
+                              title={`${task.title} (${t("taskStatus.done")})`}
+                              className="flex items-center gap-1 border-l-2 rounded-r bg-mint/10 px-1 py-0.5 text-[9.5px] leading-tight truncate opacity-70"
+                              style={{ borderLeftColor: color }}
+                            >
+                              <IconCheck className="w-2.5 h-2.5 text-mint shrink-0" />
+                              <span className="truncate">{task.title}</span>
+                            </span>
+                          );
+                        })}
                         {it.ranges.slice(0, 1).map((e) => {
                           const p = selPerson(e.personId);
                           const m = KIND_META[e.kind];
@@ -479,6 +513,8 @@ export function CalendarView({
                         const inMonth = sameMonthISO(d, first);
                         const dot = !inMonth
                           ? "bg-transparent"
+                          : it.completed.length > 0
+                          ? "bg-mint"
                           : it.ranges.length > 0
                           ? `${KIND_META[it.ranges[0].kind].dot} opacity-80`
                           : it.tasks.length > 0
@@ -510,7 +546,7 @@ export function CalendarView({
 
           {!sel ? (
             <p className="text-sm text-dim mt-3">{t("cal.pick")}</p>
-          ) : sel.tasks.length + sel.ranges.length + sel.marks.length === 0 ? (
+          ) : sel.tasks.length + sel.completed.length + sel.ranges.length + sel.marks.length === 0 ? (
             <p className="text-sm text-dim mt-3">{t("cal.nothing")}</p>
           ) : (
             <div className="mt-3 space-y-4">
@@ -532,6 +568,37 @@ export function CalendarView({
                         >
                           <span className="block text-xs font-semibold leading-tight">{task.title}</span>
                           <span className="block text-[10.5px] text-mut mt-0.5 font-mono">
+                            {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
+                            {team ? ` · ${team.name}` : ""}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {sel.completed.length > 0 && (
+                <div>
+                  <p className="flex items-center gap-1.5 text-[10.5px] font-mono uppercase tracking-[0.12em] text-mint mb-1.5">
+                    <IconCheck className="w-3.5 h-3.5" /> {t("cal.completed")} · {sel.completed.length}
+                  </p>
+                  <div className="space-y-1.5">
+                    {sel.completed.map((task) => {
+                      const team = state.teams.find((x) => x.id === task.teamId);
+                      const color = team ? TEAM_COLORS[team.color].solid : "#93a897";
+                      return (
+                        <button
+                          key={task.id}
+                          onClick={() => onNavigate("tasks")}
+                          className="w-full text-left border-l-2 rounded-r-lg bg-mint/5 hover:bg-mint/10 px-2.5 py-2 transition-colors"
+                          style={{ borderLeftColor: color }}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <IconCheck className="w-3 h-3 text-mint shrink-0" />
+                            <span className="block text-xs font-semibold leading-tight">{task.title}</span>
+                          </span>
+                          <span className="block text-[10.5px] text-mut mt-0.5 font-mono ml-[18px]">
                             {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
                             {team ? ` · ${team.name}` : ""}
                           </span>
