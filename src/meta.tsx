@@ -111,6 +111,13 @@ export const STATUS_META: Record<
     bar: "bg-amber",
     text: "text-amber",
   },
+  "on-mission": {
+    key: "status.onMission",
+    chip: "text-purple bg-purple/10 border-purple/30",
+    dot: "bg-purple",
+    bar: "bg-purple",
+    text: "text-purple",
+  },
   errand: {
     key: "status.errand",
     chip: "text-orchid bg-orchid/10 border-orchid/30",
@@ -141,7 +148,7 @@ export const STATUS_META: Record<
   },
 };
 
-export const STATUS_ORDER: StatusKey[] = ["available", "on-task", "errand", "absent", "sick", "leave"];
+export const STATUS_ORDER: StatusKey[] = ["available", "on-task", "on-mission", "errand", "absent", "sick", "leave"];
 
 export const TEAM_COLORS: Record<
   TeamColor,

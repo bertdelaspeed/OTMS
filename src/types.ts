@@ -10,7 +10,7 @@ export type EventKind =
   | "task"
   | "observation";
 
-export type StatusKey = "available" | "on-task" | "errand" | "absent" | "sick" | "leave";
+export type StatusKey = "available" | "on-task" | "on-mission" | "errand" | "absent" | "sick" | "leave";
 
 export type TeamColor = "amber" | "coral" | "mint" | "sky" | "cyan" | "rose";
 
@@ -48,6 +48,7 @@ export interface Task {
   createdAt: string; // ISO datetime
   completedAt: string | null;
   archived?: boolean; // completed tasks filed away from the working list
+  isMission?: boolean; // mission = people are away in another city
 }
 
 export interface PersonEvent {
@@ -64,9 +65,22 @@ export interface PersonEvent {
   taskId: string | null;
 }
 
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string; // ISO datetime
+  action: "create" | "update" | "delete";
+  entityType: "person" | "team" | "task" | "event";
+  entityId: string;
+  entityName: string; // human-readable name for display
+  details?: string; // additional context
+  previousState?: any; // for updates, store what changed
+  newState?: any; // for updates, store the new state
+}
+
 export interface AppState {
   people: Person[];
   teams: Team[];
   tasks: Task[];
   events: PersonEvent[];
+  auditLog: AuditLogEntry[];
 }

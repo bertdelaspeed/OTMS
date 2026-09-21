@@ -346,6 +346,7 @@ export function TaskModal({
   const [status, setStatus] = useState<TaskStatus>("todo");
   const [startDate, setStartDate] = useState(todayISO());
   const [dueDate, setDueDate] = useState(todayISO());
+  const [isMission, setIsMission] = useState(false);
   const [err, setErr] = useState("");
   const [dateErr, setDateErr] = useState("");
 
@@ -358,6 +359,7 @@ export function TaskModal({
     setStatus(task?.status ?? "todo");
     setStartDate(task?.startDate ?? prefill?.start ?? todayISO());
     setDueDate(task?.dueDate ?? prefill?.due ?? todayISO());
+    setIsMission(task?.isMission ?? false);
     setErr("");
     setDateErr("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -374,6 +376,7 @@ export function TaskModal({
     dueDate,
     createdAt: task?.createdAt ?? new Date().toISOString(),
     completedAt: task?.completedAt ?? null,
+    isMission,
   };
   const involvedCount = involvedIds(state, candidate).length;
 
@@ -464,6 +467,20 @@ export function TaskModal({
               ))}
             </Select>
           </Field>
+        </div>
+
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-line bg-panel2/50">
+          <input
+            type="checkbox"
+            id="isMission"
+            checked={isMission}
+            onChange={(e) => setIsMission(e.target.checked)}
+            className="w-4 h-4 rounded border-line2 bg-panel2 text-purple focus:ring-purple/50"
+          />
+          <label htmlFor="isMission" className="flex-1 cursor-pointer">
+            <span className="block text-sm font-medium">{t("mtask.isMission")}</span>
+            <span className="block text-[11px] text-dim mt-0.5">{t("mtask.isMissionHint")}</span>
+          </label>
         </div>
 
         <div>
