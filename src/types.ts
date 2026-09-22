@@ -1,4 +1,4 @@
-export type ViewKey = "dashboard" | "people" | "teams" | "tasks" | "calendar" | "activity" | "database";
+export type ViewKey = "dashboard" | "people" | "teams" | "tasks" | "calendar" | "activity" | "database" | "audit";
 
 export type EventKind =
   | "commendation"

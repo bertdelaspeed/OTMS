@@ -44,7 +44,7 @@ export function Dashboard({
   );
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { available: 0, "on-task": 0, errand: 0, absent: 0, sick: 0, leave: 0 };
+    const c: Record<string, number> = { available: 0, "on-task": 0, "on-mission": 0, errand: 0, absent: 0, sick: 0, leave: 0 };
     roster.forEach((r) => (c[r.s.key] += 1));
     return c;
   }, [roster]);

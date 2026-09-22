@@ -17,8 +17,10 @@ import { Tasks } from "./views/Tasks";
 import { CalendarView } from "./views/CalendarView";
 import { Activity } from "./views/Activity";
 import { Database } from "./views/Database";
+import { Audit } from "./views/Audit";
 import {
   IconActivity,
+  IconArchive,
   IconCalendar,
   IconDatabase,
   IconDownload,
@@ -38,6 +40,7 @@ const NAV: { key: ViewKey; labelKey: string; Icon: FC<SVGProps<SVGSVGElement>> }
   { key: "tasks", labelKey: "nav.tasks", Icon: IconListChecks },
   { key: "calendar", labelKey: "nav.calendar", Icon: IconCalendar },
   { key: "activity", labelKey: "nav.activity", Icon: IconActivity },
+  { key: "audit", labelKey: "nav.audit", Icon: IconArchive },
   { key: "database", labelKey: "nav.database", Icon: IconDatabase },
 ];
 
@@ -150,6 +153,7 @@ function Shell() {
     tasks: openTasks,
     calendar: null,
     activity: null,
+    audit: state.auditLog.length,
     database: null,
   };
 
@@ -333,6 +337,8 @@ function Shell() {
               <CalendarView onOpenPerson={setPersonId} onNavigate={navigate} />
             ) : view === "activity" ? (
               <Activity onOpenPerson={setPersonId} />
+            ) : view === "audit" ? (
+              <Audit />
             ) : view === "database" ? (
               <Database
                 cfg={dbCfg}
