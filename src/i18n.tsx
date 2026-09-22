@@ -40,6 +40,7 @@ const en: Record<string, string> = {
   /* statuses */
   "status.available": "Available",
   "status.onTask": "On task",
+  "status.onMission": "On mission",
   "status.absent": "Absent",
   "status.sick": "Sick",
   "status.leave": "On leave",
@@ -258,6 +259,8 @@ const en: Record<string, string> = {
   "mtask.to": "To",
   "mtask.periodHint": "People involved are shown as taken by this task between these dates.",
   "mtask.status": "Status",
+  "mtask.isMission": "This is a mission",
+  "mtask.isMissionHint": "Assigned people will be shown as unavailable (away on mission in another city)",
   "mtask.titleRequired": "A title is required.",
   "mtask.datesInvalid": "The end date must not be before the start date.",
   "mtask.person_one": "1 person",
@@ -363,6 +366,7 @@ const en: Record<string, string> = {
 
   /* nav */
   "nav.activity": "Activity",
+  "nav.audit": "Audit log",
 
   /* dashboard — today's plan */
   "dash.plan": "Today’s plan",
@@ -551,6 +555,7 @@ const fr: Record<string, string> = {
   /* statuses */
   "status.available": "Disponible",
   "status.onTask": "En tâche",
+  "status.onMission": "En mission",
   "status.absent": "Absent",
   "status.sick": "Malade",
   "status.leave": "En congé",
@@ -771,6 +776,8 @@ const fr: Record<string, string> = {
   "mtask.to": "Au",
   "mtask.periodHint": "Les personnes concernées apparaissent comme prises par cette tâche entre ces dates.",
   "mtask.status": "Statut",
+  "mtask.isMission": "C'est une mission",
+  "mtask.isMissionHint": "Les personnes affectées apparaîtront comme indisponibles (en mission dans une autre ville)",
   "mtask.titleRequired": "Le titre est obligatoire.",
   "mtask.datesInvalid": "La date de fin ne peut pas précéder la date de début.",
   "mtask.person_one": "1 personne",
@@ -876,6 +883,7 @@ const fr: Record<string, string> = {
 
   /* nav */
   "nav.activity": "Activité",
+  "nav.audit": "Journal d'audit",
 
   /* dashboard — today's plan */
   "dash.plan": "Planning du jour",

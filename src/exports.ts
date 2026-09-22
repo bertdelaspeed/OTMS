@@ -244,6 +244,7 @@ const KIND_PDF_COLOR: Record<EventKind, RGB> = {
 const STATUS_PDF_COLOR: Record<StatusKey, RGB> = {
   available: [22, 128, 77],
   "on-task": [176, 119, 30],
+  "on-mission": [167, 139, 250],
   errand: [150, 90, 170],
   absent: [190, 72, 110],
   sick: [20, 140, 140],
