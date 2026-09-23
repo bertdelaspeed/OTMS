@@ -41,7 +41,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
   );
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: rows.length, available: 0, "on-task": 0, errand: 0, absent: 0, sick: 0, leave: 0 };
+    const c: Record<string, number> = { all: rows.length, available: 0, "on-task": 0, "on-mission": 0, errand: 0, absent: 0, sick: 0, leave: 0 };
     rows.forEach((r) => (c[r.s.key] += 1));
     return c;
   }, [rows]);
@@ -73,7 +73,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
           <button
             className={btnGhost}
             onClick={() => {
-              void exportPeopleExcel(state.people, state.teams).then(() => push(t("people.exported")));
+              void exportPeopleExcel(state).then(() => push(t("people.exported")));
             }}
           >
             <IconDownload className="w-4 h-4" /> {t("people.export")}
