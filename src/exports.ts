@@ -1,7 +1,7 @@
 import type { CellHookData } from "jspdf-autotable";
 import type { AppState, EventKind, Person, StatusKey, Team } from "./types";
 import { toISO, todayISO } from "./dates";
-import { personStatus } from "./store";
+import { personStatus, tasksFor } from "./store";
 
 /* Heavy libraries (xlsx, jspdf) are loaded on demand so the app opens instantly. */
 
@@ -49,14 +49,25 @@ export async function exportPeopleExcel(state: AppState): Promise<void> {
   const header = ["Matricule", "Name", "Role", "Email", "Phone", "Joined (YYYY-MM-DD)", "Teams", "Status"];
   const rows = state.people.map((p) => {
     const status = personStatus(state, p.id);
-    const statusLabel = status.key === "on-task" ? `On task: ${status.detail}` 
-      : status.key === "on-mission" ? `On mission: ${status.detail}`
-      : status.key === "errand" ? `Errand: ${status.detail}`
-      : status.key === "available" ? "Available"
-      : status.key === "absent" ? `Absent: ${status.detail}`
-      : status.key === "sick" ? `Sick: ${status.detail}`
-      : status.key === "leave" ? `On leave: ${status.detail}`
-      : status.key;
+    const tasks = tasksFor(state, p.id);
+    
+    // Build status label with all tasks
+    let statusLabel = "";
+    if (status.key === "available") {
+      statusLabel = "Available";
+    } else if (status.key === "absent" || status.key === "sick" || status.key === "leave" || status.key === "errand") {
+      statusLabel = `${status.key}: ${status.detail}`;
+    } else if (tasks.length > 0) {
+      // List all tasks with their status and mission flag
+      const taskList = tasks.map((task) => {
+        const taskStatus = task.status === "active" ? "Active" : task.status === "todo" ? "Todo" : "Done";
+        const missionFlag = task.isMission ? " [MISSION]" : "";
+        return `${task.title} (${taskStatus}${missionFlag})`;
+      });
+      statusLabel = taskList.join("; ");
+    } else {
+      statusLabel = status.key;
+    }
     
     return [
       p.matricule ?? "",
@@ -73,7 +84,7 @@ export async function exportPeopleExcel(state: AppState): Promise<void> {
     ];
   });
   const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  ws["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 20 }, { wch: 18 }, { wch: 30 }, { wch: 35 }];
+  ws["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 20 }, { wch: 18 }, { wch: 30 }, { wch: 50 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "People");
   XLSX.writeFile(wb, `rollcall-people-${todayISO()}.xlsx`);
