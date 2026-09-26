@@ -203,48 +203,58 @@ function reducer(state: AppState, a: Action): AppState {
       };
     }
     case "ADD_TASK": {
+      // If task is created with status "done", set completedAt to today
+      const taskToAdd = a.task.status === "done" && !a.task.completedAt
+        ? { ...a.task, completedAt: todayISO() }
+        : a.task;
+      
       const events = [
         ...state.events,
-        ...involvedIds(state, a.task).map((pid) =>
+        ...involvedIds(state, taskToAdd).map((pid) =>
           makeEvent({
             personId: pid,
             kind: "task",
-            title: `Assigned: ${a.task.title}`,
+            title: `Assigned: ${taskToAdd.title}`,
             note: "",
             date: todayISO(),
             endDate: null,
-            taskId: a.task.id,
+            taskId: taskToAdd.id,
           })
         ),
       ];
       return {
         ...state,
-        tasks: [...state.tasks, a.task],
+        tasks: [...state.tasks, taskToAdd],
         events,
         auditLog: [
           ...state.auditLog,
           makeAuditLog(
             "create",
             "task",
-            a.task.id,
-            a.task.title,
-            a.task.isMission ? "Mission created" : "Task created"
+            taskToAdd.id,
+            taskToAdd.title,
+            taskToAdd.isMission ? "Mission created" : "Task created"
           ),
         ],
       };
     }
     case "UPDATE_TASK": {
       let events = state.events;
-      if (a.task.status === "done" && a.prev.status !== "done") {
-        events = [...events, ...completionEvents(state, a.task)];
+      // If status changed to "done", set completedAt to today
+      const taskToUpdate = a.task.status === "done" && a.prev.status !== "done" && !a.task.completedAt
+        ? { ...a.task, completedAt: todayISO() }
+        : a.task;
+      
+      if (taskToUpdate.status === "done" && a.prev.status !== "done") {
+        events = [...events, ...completionEvents(state, taskToUpdate)];
       }
       return {
         ...state,
-        tasks: state.tasks.map((t) => (t.id === a.task.id ? a.task : t)),
+        tasks: state.tasks.map((t) => (t.id === taskToUpdate.id ? taskToUpdate : t)),
         events,
         auditLog: [
           ...state.auditLog,
-          makeAuditLog("update", "task", a.task.id, a.task.title, "Task updated"),
+          makeAuditLog("update", "task", taskToUpdate.id, taskToUpdate.title, "Task updated"),
         ],
       };
     }
