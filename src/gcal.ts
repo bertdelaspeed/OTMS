@@ -1,5 +1,6 @@
 import type { AppState, Task } from "./types";
 import { addDays, fmtDateYear } from "./dates";
+import { env } from "./env";
 
 const TOKEN_KEY = "rollcall.gcal.token.v1";
 const LINKS_KEY = "rollcall.gcal.links.v1";
@@ -56,11 +57,11 @@ export function saveGcalToken(t: GcalToken | null): void {
 export function loadGcalCfg(): GcalCfg {
   try {
     const raw = localStorage.getItem(CFG_KEY);
-    if (raw) return { clientId: "", enabled: false, deleteOrphans: true, lastSync: null, ...JSON.parse(raw) };
+    if (raw) return { clientId: env.googleClientId, enabled: false, deleteOrphans: true, lastSync: null, ...JSON.parse(raw) };
   } catch {
     /* fall through */
   }
-  return { clientId: "", enabled: false, deleteOrphans: true, lastSync: null };
+  return { clientId: env.googleClientId, enabled: false, deleteOrphans: true, lastSync: null };
 }
 
 export function saveGcalCfg(c: GcalCfg): void {

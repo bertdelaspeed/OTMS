@@ -1,4 +1,5 @@
 import type { AppState } from "./types";
+import { env } from "./env";
 
 export type BackendKind = "local" | "bridge" | "supabase" | "firebase";
 export type BridgeEngine = "postgres" | "mysql";
@@ -23,7 +24,7 @@ const LAST = "rollcall.dbsync.last";
 
 export function defaultDbConfig(): DbConfig {
   return {
-    kind: "local",
+    kind: env.dbKind,
     bridgeUrl: "http://127.0.0.1:8787",
     bridgeEngine: "postgres",
     dbHost: "127.0.0.1",
@@ -31,10 +32,10 @@ export function defaultDbConfig(): DbConfig {
     dbName: "rollcall",
     dbUser: "postgres",
     dbPassword: "",
-    supabaseUrl: "",
-    supabaseKey: "",
-    firebaseUrl: "",
-    autoSync: true,
+    supabaseUrl: env.supabaseUrl,
+    supabaseKey: env.supabaseAnonKey,
+    firebaseUrl: env.firebaseUrl,
+    autoSync: env.autoSync,
   };
 }
 
