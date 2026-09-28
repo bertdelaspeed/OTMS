@@ -32,8 +32,11 @@ export function Audit() {
   const [filter, setFilter] = useState<EntityType | "all">("all");
 
   const filtered = useMemo(() => {
-    if (filter === "all") return state.auditLog;
-    return state.auditLog.filter((e) => e.entityType === filter);
+    const entries = filter === "all" 
+      ? state.auditLog 
+      : state.auditLog.filter((e) => e.entityType === filter);
+    // Sort by timestamp descending (most recent first)
+    return [...entries].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [state.auditLog, filter]);
 
   const counts = useMemo(() => {
