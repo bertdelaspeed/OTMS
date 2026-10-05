@@ -137,7 +137,16 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
   /* -------- aggregate stats (filters applied here cascade everywhere) -------- */
   const agg = useMemo(() => {
     const evs = state.events
-      .filter((e) => e.date <= end && (e.endDate ?? e.date) >= start)
+      .filter((e) => {
+        // Event must have started before or on the end of the period
+        if (e.date > end) return false;
+        // If endDate exists, it must end after or on the start of the period
+        // If endDate is null, treat as ongoing (still active)
+        if (e.endDate) {
+          return e.endDate >= start;
+        }
+        return true;
+      })
       .filter((e) => {
         if (!personMatch(e.personId)) return false;
         if (e.kind === "task") return catActive("taskDone") || catActive("taskAssigned");

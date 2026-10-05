@@ -40,9 +40,17 @@ function itemsForDay(state: AppState, day: string): DayItems {
   const completed = state.tasks
     .filter((t) => t.status === "done" && t.completedAt === day)
     .sort((a, b) => a.title.localeCompare(b.title));
-  const ranges = state.events.filter(
-    (e) => RANGE_KINDS.includes(e.kind) && e.date <= day && (e.endDate ?? e.date) >= day
-  );
+  const ranges = state.events.filter((e) => {
+    if (!RANGE_KINDS.includes(e.kind)) return false;
+    // Must have started on or before this day
+    if (e.date > day) return false;
+    // If endDate exists, this day must be within the range
+    // If endDate is null, treat as ongoing (appears on all days after start)
+    if (e.endDate) {
+      return e.endDate >= day;
+    }
+    return true;
+  });
   const marks = state.events.filter((e) => e.date === day && !RANGE_KINDS.includes(e.kind));
   return { tasks, completed, ranges, marks };
 }
