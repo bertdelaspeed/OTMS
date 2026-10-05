@@ -29,6 +29,7 @@ export type Action =
   | { type: "SET_TASK_ARCHIVED"; id: string; archived: boolean }
   | { type: "REMOVE_TASK"; id: string }
   | { type: "ADD_EVENT"; event: PersonEvent }
+  | { type: "UPDATE_EVENT"; event: PersonEvent; prev: PersonEvent }
   | { type: "REMOVE_EVENT"; id: string }
   | { type: "RESET"; state: AppState };
 
@@ -325,6 +326,23 @@ function reducer(state: AppState, a: Action): AppState {
             a.event.id,
             a.event.title,
             `Event logged for ${person?.name ?? "Unknown"}`
+          ),
+        ],
+      };
+    }
+    case "UPDATE_EVENT": {
+      const person = state.people.find((p) => p.id === a.event.personId);
+      return {
+        ...state,
+        events: state.events.map((e) => (e.id === a.event.id ? a.event : e)),
+        auditLog: [
+          ...state.auditLog,
+          makeAuditLog(
+            "update",
+            "event",
+            a.event.id,
+            a.event.title,
+            `Event updated for ${person?.name ?? "Unknown"}`
           ),
         ],
       };

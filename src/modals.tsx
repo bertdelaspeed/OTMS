@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { EventKind, Person, Task, TaskStatus, Team, TeamColor } from "./types";
+import type { EventKind, Person, PersonEvent, Task, TaskStatus, Team, TeamColor } from "./types";
 import { involvedIds, makeEvent, useStore } from "./store";
 import { uid } from "./data";
 import { todayISO } from "./dates";
@@ -522,12 +522,15 @@ export function EventModal({
   personId,
   onClose,
   prefillDate,
+  event,
 }: {
   open: boolean;
   /** null = let the user pick the person inside the modal */
   personId: string | null;
   onClose: () => void;
   prefillDate?: string | null;
+  /** Optional: existing event to edit */
+  event?: PersonEvent | null;
 }) {
   const { state, dispatch } = useStore();
   const { t } = useI18n();
@@ -546,18 +549,33 @@ export function EventModal({
 
   useEffect(() => {
     if (!open) return;
-    setKind("observation");
-    setTitle("");
-    setDate(prefillDate ?? todayISO());
-    setEndDate("");
-    setTimeFrom("");
-    setTimeTo("");
-    setNote("");
+    
+    // If editing an existing event, populate form with its data
+    if (event) {
+      setKind(event.kind);
+      setTitle(event.title);
+      setDate(event.date);
+      setEndDate(event.endDate ?? "");
+      setTimeFrom(event.timeFrom ?? "");
+      setTimeTo(event.timeTo ?? "");
+      setNote(event.note);
+      setPicked(event.personId);
+    } else {
+      // Creating a new event
+      setKind("observation");
+      setTitle("");
+      setDate(prefillDate ?? todayISO());
+      setEndDate("");
+      setTimeFrom("");
+      setTimeTo("");
+      setNote("");
+      setPicked(state.people[0]?.id ?? "");
+    }
+    
     setErr("");
     setTimeErr("");
-    setPicked(state.people[0]?.id ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, personId]);
+  }, [open, personId, event]);
 
   const effectiveId = personId ?? picked;
   const person = state.people.find((p) => p.id === effectiveId);
@@ -572,21 +590,35 @@ export function EventModal({
       if (!timeFrom || !timeTo) return setTimeErr(t("mev.timeRequired"));
       if (timeTo <= timeFrom) return setTimeErr(t("mev.timeInvalid"));
     }
-    dispatch({
-      type: "ADD_EVENT",
-      event: makeEvent({
-        personId: person.id,
-        kind,
-        title: title.trim(),
-        note: note.trim(),
-        date: date || todayISO(),
-        endDate: isRange && endDate ? endDate : null,
-        timeFrom: isTime ? timeFrom : null,
-        timeTo: isTime ? timeTo : null,
-        taskId: null,
-      }),
-    });
-    push(t("mev.saved", { name: person.name.split(" ")[0] }));
+    
+    const eventData = {
+      personId: person.id,
+      kind,
+      title: title.trim(),
+      note: note.trim(),
+      date: date || todayISO(),
+      endDate: isRange && endDate ? endDate : null,
+      timeFrom: isTime ? timeFrom : null,
+      timeTo: isTime ? timeTo : null,
+      taskId: event?.taskId ?? null,
+    };
+    
+    if (event) {
+      // Update existing event
+      dispatch({
+        type: "UPDATE_EVENT",
+        event: { ...event, ...eventData },
+        prev: event,
+      });
+      push(t("mev.updated", { name: person.name.split(" ")[0] }));
+    } else {
+      // Create new event
+      dispatch({
+        type: "ADD_EVENT",
+        event: makeEvent(eventData),
+      });
+      push(t("mev.saved", { name: person.name.split(" ")[0] }));
+    }
     onClose();
   };
 
@@ -594,11 +626,13 @@ export function EventModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={t("mev.titleFor", { name: person.name })}
+      title={event ? t("mev.editTitle", { name: person.name }) : t("mev.titleFor", { name: person.name })}
       footer={
         <>
           <button className={btnGhost} onClick={onClose}>{t("common.cancel")}</button>
-          <button className={btnPrimary} onClick={submit}>{t("common.create")}</button>
+          <button className={btnPrimary} onClick={submit}>
+            {event ? t("common.save") : t("common.create")}
+          </button>
         </>
       }
     >

@@ -285,6 +285,9 @@ const en: Record<string, string> = {
   "mev.notePh": "Context, details, follow-up…",
   "mev.required": "A short description is required.",
   "mev.saved": "Logged on {name}'s record.",
+  "mev.updated": "Updated on {name}'s record.",
+  "mev.editTitle": "Edit event for {name}",
+  "mev.edit": "Edit event",
 
   /* calendar */
   "cal.title": "Calendar",
@@ -802,6 +805,9 @@ const fr: Record<string, string> = {
   "mev.notePh": "Contexte, détails, suivi…",
   "mev.required": "Une courte description est obligatoire.",
   "mev.saved": "Consigné au registre de {name}.",
+  "mev.updated": "Mis à jour au registre de {name}.",
+  "mev.editTitle": "Modifier l'événement pour {name}",
+  "mev.edit": "Modifier l'événement",
 
   /* calendar */
   "cal.title": "Calendrier",

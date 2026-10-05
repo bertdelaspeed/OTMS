@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { EventKind } from "../types";
+import type { EventKind, PersonEvent } from "../types";
 import { personStatus, tasksFor, teamsOf, useStore } from "../store";
 import { KIND_META, STATUS_META } from "../meta";
 import { exportPersonPdf } from "../exports";
@@ -12,6 +12,7 @@ import {
   StatusPill,
   StatusSegments,
   btnGhost,
+  btnIcon,
   btnPrimary,
   panelCls,
   useToast,
@@ -64,6 +65,7 @@ export function Profile({
   const [filter, setFilter] = useState<KindFilter>("all");
   const [eventOpen, setEventOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<PersonEvent | null>(null);
 
   const events = useMemo(
     () =>
@@ -375,9 +377,16 @@ export function Profile({
                         </span>
                       </div>
                     </div>
-                    <span className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                    <div className="flex items-center gap-1.5 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        className={btnIcon}
+                        title={t("mev.edit")}
+                        onClick={() => setEditingEvent(e)}
+                      >
+                        <IconPencil className="w-4 h-4" />
+                      </button>
                       <DangerAction onConfirm={() => removeEvent(e.id, e.title)} label={t("profile.removeEntry")} />
-                    </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -386,7 +395,15 @@ export function Profile({
         </section>
       </div>
 
-      <EventModal open={eventOpen} onClose={() => setEventOpen(false)} personId={person.id} />
+      <EventModal
+        open={eventOpen || editingEvent !== null}
+        onClose={() => {
+          setEventOpen(false);
+          setEditingEvent(null);
+        }}
+        personId={person.id}
+        event={editingEvent}
+      />
       <PersonModal open={editOpen} onClose={() => setEditOpen(false)} person={person} />
     </div>
   );
