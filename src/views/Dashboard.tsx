@@ -92,13 +92,18 @@ export function Dashboard({
         .map((r) => {
           const kindOf = { absent: "absence", sick: "sick", leave: "leave" } as const;
           const ev = state.events
-            .filter(
-              (e) =>
-                e.personId === r.p.id &&
-                e.kind === kindOf[r.s.key as "absent" | "sick" | "leave"] &&
-                e.date <= today &&
-                (e.endDate ?? e.date) >= today
-            )
+            .filter((e) => {
+              if (e.personId !== r.p.id) return false;
+              if (e.kind !== kindOf[r.s.key as "absent" | "sick" | "leave"]) return false;
+              // Must have started on or before today
+              if (e.date > today) return false;
+              // If endDate exists, today must be within range
+              // If endDate is null, treat as ongoing
+              if (e.endDate) {
+                return e.endDate >= today;
+              }
+              return true;
+            })
             .sort((a, b) => b.date.localeCompare(a.date))[0];
           return { p: r.p, ev };
         }),

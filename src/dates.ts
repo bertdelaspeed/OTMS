@@ -41,7 +41,14 @@ export function spanDays(start: string, end: string | null): number {
 
 export function coversToday(e: { date: string; endDate: string | null }): boolean {
   const t = todayISO();
-  return e.date <= t && (e.endDate ?? e.date) >= t;
+  // Event must have started on or before today
+  if (e.date > t) return false;
+  // If endDate exists, today must be within the range
+  // If endDate is null, treat as ongoing (still active)
+  if (e.endDate) {
+    return e.endDate >= t;
+  }
+  return true;
 }
 
 /* ---------- locale-aware formatting ---------- */

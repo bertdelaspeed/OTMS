@@ -463,7 +463,17 @@ export function personStatus(state: AppState, personId: string): StatusInfo {
         e.personId === personId &&
         (e.kind === "absence" || e.kind === "sick" || e.kind === "leave")
     )
-    .filter((e) => e.date <= today && (e.endDate ?? e.date) >= today)
+    .filter((e) => {
+      // Event must have started on or before today
+      if (e.date > today) return false;
+      // If endDate exists, today must be within the range
+      // If endDate is null, treat as ongoing (still active)
+      if (e.endDate) {
+        return e.endDate >= today;
+      }
+      // No endDate means it's ongoing
+      return true;
+    })
     .sort((x, y) => y.date.localeCompare(x.date))[0];
   if (out) {
     const key: StatusKey = out.kind === "absence" ? "absent" : out.kind === "sick" ? "sick" : "leave";
