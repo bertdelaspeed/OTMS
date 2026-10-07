@@ -60,7 +60,16 @@ export function Tasks() {
           const overdue = task.dueDate < today && task.status !== "done";
           return { task, team, members, overdue };
         })
-        .sort((a, b) => RANK[a.task.status] - RANK[b.task.status] || a.task.dueDate.localeCompare(b.task.dueDate)),
+        .sort((a, b) => {
+          // For completed tasks, sort by completion date (most recent first)
+          if (a.task.status === "done" && b.task.status === "done") {
+            const aCompleted = a.task.completedAt || "";
+            const bCompleted = b.task.completedAt || "";
+            return bCompleted.localeCompare(aCompleted); // descending
+          }
+          // Otherwise, sort by status rank, then due date
+          return RANK[a.task.status] - RANK[b.task.status] || a.task.dueDate.localeCompare(b.task.dueDate);
+        }),
     [state, today]
   );
 
