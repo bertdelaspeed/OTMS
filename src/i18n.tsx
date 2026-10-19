@@ -446,6 +446,10 @@ const en: Record<string, string> = {
   "rankings.missionDetails": "Mission Details",
   "rankings.noMissionsFound": "No missions found",
   "rankings.noMissionsFoundDesc": "This person hasn't participated in any completed missions yet.",
+  "rankings.taskDetails": "Task Details",
+  "rankings.noTasksFound": "No tasks found",
+  "rankings.noTasksFoundDesc": "This person hasn't completed any tasks yet.",
+  "rankings.mission": "Mission",
 
   /* database */
   "nav.database": "Database",
@@ -995,6 +999,10 @@ const fr: Record<string, string> = {
   "rankings.missionDetails": "Détails des missions",
   "rankings.noMissionsFound": "Aucune mission trouvée",
   "rankings.noMissionsFoundDesc": "Cette personne n'a pas encore participé à des missions terminées.",
+  "rankings.taskDetails": "Détails des tâches",
+  "rankings.noTasksFound": "Aucune tâche trouvée",
+  "rankings.noTasksFoundDesc": "Cette personne n'a pas encore terminé de tâches.",
+  "rankings.mission": "Mission",
 
   /* database */
   "nav.database": "Base de données",
