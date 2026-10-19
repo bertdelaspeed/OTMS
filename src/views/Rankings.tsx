@@ -241,9 +241,15 @@ export function Rankings() {
                     </div>
 
                     {/* Stats */}
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-2xl font-bold text-purple">{person.missionDays}</p>
-                      <p className="text-xs text-mut">{t("rankings.days")}</p>
+                    <div className="flex-shrink-0 text-right space-y-1">
+                      <div>
+                        <p className="text-2xl font-bold text-purple">{person.missionDays}</p>
+                        <p className="text-xs text-mut">{t("rankings.days")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-purple/70">{person.missionCount}</p>
+                        <p className="text-[10px] text-mut">{t("rankings.missions")}</p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -279,6 +285,12 @@ export function Rankings() {
                   <th className="text-right p-4 text-xs font-medium text-mut uppercase tracking-wider">
                     <div className="flex items-center justify-end gap-2">
                       <IconMapPin className="w-4 h-4 text-purple" />
+                      {t("rankings.missionsCount")}
+                    </div>
+                  </th>
+                  <th className="text-right p-4 text-xs font-medium text-mut uppercase tracking-wider">
+                    <div className="flex items-center justify-end gap-2">
+                      <IconMapPin className="w-4 h-4 text-purple" />
                       {t("rankings.missionDays")}
                     </div>
                   </th>
@@ -308,6 +320,9 @@ export function Rankings() {
                       </td>
                       <td className="p-4 text-right">
                         <span className="text-lg font-bold text-mint">{person.completedTasks}</span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="text-lg font-bold text-purple">{person.missionCount}</span>
                       </td>
                       <td className="p-4 text-right">
                         <span className="text-lg font-bold text-purple">{person.missionDays}</span>
