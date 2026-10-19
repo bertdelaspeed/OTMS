@@ -3,6 +3,7 @@ import { useStore } from "../store";
 import { Avatar, Chip, EmptyState, panelCls } from "../ui";
 import { IconBriefcase, IconCheck, IconMapPin, IconStar, IconTrophy } from "../icons";
 import { useI18n } from "../i18n";
+import { spanDays } from "../dates";
 
 interface PersonStats {
   id: string;
@@ -11,6 +12,7 @@ interface PersonStats {
   hue: number;
   completedTasks: number;
   missionCount: number;
+  missionDays: number;
 }
 
 export function Rankings() {
@@ -29,6 +31,7 @@ export function Rankings() {
         hue: p.hue,
         completedTasks: 0,
         missionCount: 0,
+        missionDays: 0,
       });
     });
 
@@ -48,6 +51,9 @@ export function Rankings() {
             stats.completedTasks += 1;
             if (task.isMission) {
               stats.missionCount += 1;
+              // Calculate mission duration in days
+              const days = spanDays(task.startDate, task.dueDate);
+              stats.missionDays += days;
             }
           }
         });
@@ -66,13 +72,13 @@ export function Rankings() {
 
   const topMissionGoers = useMemo(() => {
     return [...stats]
-      .filter((s) => s.missionCount > 0)
-      .sort((a, b) => b.missionCount - a.missionCount)
+      .filter((s) => s.missionDays > 0)
+      .sort((a, b) => b.missionDays - a.missionDays)
       .slice(0, 10);
   }, [stats]);
 
   const totalCompleted = stats.reduce((sum, s) => sum + s.completedTasks, 0);
-  const totalMissions = stats.reduce((sum, s) => sum + s.missionCount, 0);
+  const totalMissionDays = stats.reduce((sum, s) => sum + s.missionDays, 0);
 
   return (
     <div className="space-y-6">
@@ -103,8 +109,8 @@ export function Rankings() {
               <IconMapPin className="w-5 h-5 text-purple" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-ink">{totalMissions}</p>
-              <p className="text-xs text-mut">{t("rankings.totalMissions")}</p>
+              <p className="text-2xl font-bold text-ink">{totalMissionDays}</p>
+              <p className="text-xs text-mut">{t("rankings.totalMissionDays")}</p>
             </div>
           </div>
         </div>
@@ -236,8 +242,8 @@ export function Rankings() {
 
                     {/* Stats */}
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-2xl font-bold text-purple">{person.missionCount}</p>
-                      <p className="text-xs text-mut">{t("rankings.missions")}</p>
+                      <p className="text-2xl font-bold text-purple">{person.missionDays}</p>
+                      <p className="text-xs text-mut">{t("rankings.days")}</p>
                     </div>
                   </div>
                 ))}
@@ -273,17 +279,17 @@ export function Rankings() {
                   <th className="text-right p-4 text-xs font-medium text-mut uppercase tracking-wider">
                     <div className="flex items-center justify-end gap-2">
                       <IconMapPin className="w-4 h-4 text-purple" />
-                      {t("rankings.missionsCount")}
+                      {t("rankings.missionDays")}
                     </div>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {stats
-                  .filter((s) => s.completedTasks > 0 || s.missionCount > 0)
+                  .filter((s) => s.completedTasks > 0 || s.missionDays > 0)
                   .sort((a, b) => {
-                    const aTotal = a.completedTasks + a.missionCount;
-                    const bTotal = b.completedTasks + b.missionCount;
+                    const aTotal = a.completedTasks + a.missionDays;
+                    const bTotal = b.completedTasks + b.missionDays;
                     return bTotal - aTotal;
                   })
                   .map((person, index) => (
@@ -304,7 +310,7 @@ export function Rankings() {
                         <span className="text-lg font-bold text-mint">{person.completedTasks}</span>
                       </td>
                       <td className="p-4 text-right">
-                        <span className="text-lg font-bold text-purple">{person.missionCount}</span>
+                        <span className="text-lg font-bold text-purple">{person.missionDays}</span>
                       </td>
                     </tr>
                   ))}
