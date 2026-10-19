@@ -437,8 +437,10 @@ const en: Record<string, string> = {
   "rankings.rank": "Rank",
   "rankings.person": "Person",
   "rankings.completedTasks": "Completed Tasks",
+  "rankings.missionsCount": "Missions",
   "rankings.missionDays": "Mission Days",
   "rankings.tasks": "tasks",
+  "rankings.missions": "missions",
   "rankings.days": "days",
 
   /* database */
@@ -980,8 +982,10 @@ const fr: Record<string, string> = {
   "rankings.rank": "Rang",
   "rankings.person": "Personne",
   "rankings.completedTasks": "Tâches terminées",
+  "rankings.missionsCount": "Missions",
   "rankings.missionDays": "Jours de mission",
   "rankings.tasks": "tâches",
+  "rankings.missions": "missions",
   "rankings.days": "jours",
 
   /* database */
