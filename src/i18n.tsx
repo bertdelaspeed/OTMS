@@ -442,6 +442,10 @@ const en: Record<string, string> = {
   "rankings.tasks": "tasks",
   "rankings.missions": "missions",
   "rankings.days": "days",
+  "rankings.total": "Total",
+  "rankings.missionDetails": "Mission Details",
+  "rankings.noMissionsFound": "No missions found",
+  "rankings.noMissionsFoundDesc": "This person hasn't participated in any completed missions yet.",
 
   /* database */
   "nav.database": "Database",
@@ -987,6 +991,10 @@ const fr: Record<string, string> = {
   "rankings.tasks": "tâches",
   "rankings.missions": "missions",
   "rankings.days": "jours",
+  "rankings.total": "Total",
+  "rankings.missionDetails": "Détails des missions",
+  "rankings.noMissionsFound": "Aucune mission trouvée",
+  "rankings.noMissionsFoundDesc": "Cette personne n'a pas encore participé à des missions terminées.",
 
   /* database */
   "nav.database": "Base de données",

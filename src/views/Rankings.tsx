@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "../store";
-import { Avatar, Chip, EmptyState, panelCls } from "../ui";
-import { IconBriefcase, IconCheck, IconMapPin, IconStar, IconTrophy } from "../icons";
+import { Avatar, Chip, EmptyState, Modal, panelCls, btnGhost } from "../ui";
+import { IconBriefcase, IconCheck, IconMapPin, IconStar, IconTrophy, IconX } from "../icons";
 import { useI18n } from "../i18n";
-import { spanDays } from "../dates";
+import { spanDays, fmtDate } from "../dates";
+import { TEAM_COLORS } from "../meta";
+import type { Task } from "../types";
 
 interface PersonStats {
   id: string;
@@ -18,6 +20,7 @@ interface PersonStats {
 export function Rankings() {
   const { state } = useStore();
   const { t } = useI18n();
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     const personStats = new Map<string, PersonStats>();
@@ -79,6 +82,21 @@ export function Rankings() {
 
   const totalCompleted = stats.reduce((sum, s) => sum + s.completedTasks, 0);
   const totalMissionDays = stats.reduce((sum, s) => sum + s.missionDays, 0);
+
+  // Get missions for a specific person
+  const getPersonMissions = (personId: string): Task[] => {
+    return state.tasks.filter((task) => {
+      if (!task.isMission || task.status !== "done") return false;
+      const involved = [
+        ...(task.assigneeIds || []),
+        ...(task.teamId ? state.teams.find((t) => t.id === task.teamId)?.memberIds || [] : []),
+      ];
+      return involved.includes(personId);
+    }).sort((a, b) => b.completedAt?.localeCompare(a.completedAt || "") || 0);
+  };
+
+  const selectedPersonData = selectedPerson ? state.people.find((p) => p.id === selectedPerson) : null;
+  const selectedPersonMissions = selectedPerson ? getPersonMissions(selectedPerson) : [];
 
   return (
     <div className="space-y-6">
@@ -210,7 +228,8 @@ export function Rankings() {
                 {topMissionGoers.map((person, index) => (
                   <div
                     key={person.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-panel2/50 hover:bg-panel2 transition-colors"
+                    onClick={() => setSelectedPerson(person.id)}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-panel2/50 hover:bg-panel2 transition-colors cursor-pointer"
                   >
                     {/* Rank */}
                     <div className="flex-shrink-0 w-8 text-center">
@@ -334,6 +353,68 @@ export function Rankings() {
           </div>
         </div>
       </div>
+
+      {/* Mission Details Modal */}
+      <Modal
+        open={selectedPerson !== null}
+        onClose={() => setSelectedPerson(null)}
+        title={t("rankings.missionDetails")}
+        subtitle={selectedPersonData ? `${selectedPersonData.name} - ${selectedPersonData.role}` : ""}
+      >
+        {selectedPersonMissions.length === 0 ? (
+          <EmptyState
+            icon={<IconMapPin className="w-5 h-5" />}
+            title={t("rankings.noMissionsFound")}
+            body={t("rankings.noMissionsFoundDesc")}
+          />
+        ) : (
+          <div className="space-y-3">
+            {selectedPersonMissions.map((mission) => {
+              const days = spanDays(mission.startDate, mission.dueDate);
+              const team = mission.teamId ? state.teams.find((t) => t.id === mission.teamId) : null;
+              
+              return (
+                <div
+                  key={mission.id}
+                  className="p-4 rounded-lg border border-line bg-panel2/50 hover:bg-panel2 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm mb-1">{mission.title}</p>
+                      {mission.description && (
+                        <p className="text-xs text-mut mb-2">{mission.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-mut">
+                        <span>
+                          {fmtDate(mission.startDate)} → {fmtDate(mission.dueDate)}
+                        </span>
+                        {team && (
+                          <Chip className={TEAM_COLORS[team.color].chip}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${TEAM_COLORS[team.color].dot}`} />
+                            {team.name}
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-2xl font-bold text-purple">{days}</p>
+                      <p className="text-xs text-mut">{t("rankings.days")}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="pt-3 border-t border-line">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-mut">{t("rankings.total")}</span>
+                <span className="font-bold text-purple">
+                  {selectedPersonMissions.reduce((sum, m) => sum + spanDays(m.startDate, m.dueDate), 0)} {t("rankings.days")}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
