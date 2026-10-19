@@ -21,6 +21,7 @@ export function Rankings() {
   const { state } = useStore();
   const { t } = useI18n();
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
+  const [selectedTopPerformer, setSelectedTopPerformer] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     const personStats = new Map<string, PersonStats>();
@@ -98,6 +99,21 @@ export function Rankings() {
   const selectedPersonData = selectedPerson ? state.people.find((p) => p.id === selectedPerson) : null;
   const selectedPersonMissions = selectedPerson ? getPersonMissions(selectedPerson) : [];
 
+  // Get completed tasks for a specific person
+  const getPersonCompletedTasks = (personId: string): Task[] => {
+    return state.tasks.filter((task) => {
+      if (task.status !== "done") return false;
+      const involved = [
+        ...(task.assigneeIds || []),
+        ...(task.teamId ? state.teams.find((t) => t.id === task.teamId)?.memberIds || [] : []),
+      ];
+      return involved.includes(personId);
+    }).sort((a, b) => b.completedAt?.localeCompare(a.completedAt || "") || 0);
+  };
+
+  const selectedTopPerformerData = selectedTopPerformer ? state.people.find((p) => p.id === selectedTopPerformer) : null;
+  const selectedTopPerformerTasks = selectedTopPerformer ? getPersonCompletedTasks(selectedTopPerformer) : [];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -161,7 +177,8 @@ export function Rankings() {
                 {topPerformers.map((person, index) => (
                   <div
                     key={person.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-panel2/50 hover:bg-panel2 transition-colors"
+                    onClick={() => setSelectedTopPerformer(person.id)}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-panel2/50 hover:bg-panel2 transition-colors cursor-pointer"
                   >
                     {/* Rank */}
                     <div className="flex-shrink-0 w-8 text-center">
@@ -409,6 +426,74 @@ export function Rankings() {
                 <span className="text-mut">{t("rankings.total")}</span>
                 <span className="font-bold text-purple">
                   {selectedPersonMissions.reduce((sum, m) => sum + spanDays(m.startDate, m.dueDate), 0)} {t("rankings.days")}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Task Details Modal */}
+      <Modal
+        open={selectedTopPerformer !== null}
+        onClose={() => setSelectedTopPerformer(null)}
+        title={t("rankings.taskDetails")}
+        subtitle={selectedTopPerformerData ? `${selectedTopPerformerData.name} - ${selectedTopPerformerData.role}` : ""}
+      >
+        {selectedTopPerformerTasks.length === 0 ? (
+          <EmptyState
+            icon={<IconCheck className="w-5 h-5" />}
+            title={t("rankings.noTasksFound")}
+            body={t("rankings.noTasksFoundDesc")}
+          />
+        ) : (
+          <div className="space-y-3">
+            {selectedTopPerformerTasks.map((task) => {
+              const team = task.teamId ? state.teams.find((t) => t.id === task.teamId) : null;
+              const days = spanDays(task.startDate, task.dueDate);
+              
+              return (
+                <div
+                  key={task.id}
+                  className="p-4 rounded-lg border border-line bg-panel2/50 hover:bg-panel2 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm mb-1">{task.title}</p>
+                      {task.description && (
+                        <p className="text-xs text-mut mb-2">{task.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 text-xs text-mut">
+                        <span>
+                          {fmtDate(task.startDate)} → {fmtDate(task.dueDate)}
+                        </span>
+                        {team && (
+                          <Chip className={TEAM_COLORS[team.color].chip}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${TEAM_COLORS[team.color].dot}`} />
+                            {team.name}
+                          </Chip>
+                        )}
+                        {task.isMission && (
+                          <Chip className="text-purple bg-purple/10 border-purple/30">
+                            <IconMapPin className="w-3 h-3" />
+                            {t("rankings.mission")}
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-2xl font-bold text-mint">{days}</p>
+                      <p className="text-xs text-mut">{t("rankings.days")}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="pt-3 border-t border-line">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-mut">{t("rankings.total")}</span>
+                <span className="font-bold text-mint">
+                  {selectedTopPerformerTasks.length} {t("rankings.tasks")}
                 </span>
               </div>
             </div>
