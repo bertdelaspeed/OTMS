@@ -96,6 +96,10 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
   const [period, setPeriod] = useState<Period>("week");
   const [cursor, setCursor] = useState(today);
 
+  /* -------- task movement period (independent from main period) -------- */
+  const [taskMovePeriod, setTaskMovePeriod] = useState<Period>("week");
+  const [taskMoveCursor, setTaskMoveCursor] = useState(today);
+
   /* -------- filters -------- */
   const [cats, setCats] = useState<Cat[]>([]);
   const [personId, setPersonId] = useState("");
@@ -133,6 +137,18 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
     period === "week"
       ? `${t("cal.weekN", { n: weekNumber(start) })} · ${fmtDate(start)} – ${fmtDate(end)}`
       : monthTitle(start);
+
+  /* -------- task movement period calculations -------- */
+  const taskMoveStart = taskMovePeriod === "week" ? startOfWeekISO(taskMoveCursor) : monthStartISO(taskMoveCursor);
+  const taskMoveEnd = taskMovePeriod === "week" ? addDays(startOfWeekISO(taskMoveCursor), 6) : monthEndISO(taskMoveCursor);
+
+  const navigateTaskMove = (dir: -1 | 1) =>
+    setTaskMoveCursor(taskMovePeriod === "week" ? addDays(taskMoveCursor, dir * 7) : addMonthsISO(taskMoveCursor, dir));
+
+  const taskMovePeriodLabel =
+    taskMovePeriod === "week"
+      ? `${t("cal.weekN", { n: weekNumber(taskMoveStart) })} · ${fmtDate(taskMoveStart)} – ${fmtDate(taskMoveEnd)}`
+      : monthTitle(taskMoveStart);
 
   /* -------- aggregate stats (filters applied here cascade everywhere) -------- */
   const agg = useMemo(() => {
@@ -181,6 +197,23 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, start, end, cats, personId, teamId]);
+
+  /* -------- task movement tasks (using task movement period) -------- */
+  const taskMoveCompleted = useMemo(() => {
+    return state.tasks
+      .filter((x) => x.completedAt && x.completedAt >= taskMoveStart && x.completedAt <= taskMoveEnd)
+      .filter(taskMatch)
+      .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? ""));
+  }, [state.tasks, taskMoveStart, taskMoveEnd, personId, teamId]);
+
+  const taskMoveAssigned = useMemo(() => {
+    return state.tasks
+      .filter((x) => {
+        const d = toISO(new Date(x.createdAt));
+        return d >= taskMoveStart && d <= taskMoveEnd;
+      })
+      .filter(taskMatch);
+  }, [state.tasks, taskMoveStart, taskMoveEnd, personId, teamId]);
 
   /* -------- day by day -------- */
   const days = useMemo(() => {
@@ -654,16 +687,53 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
 
               {/* task movement */}
               <section className={`${panelCls} reveal`} style={{ animationDelay: "250ms" }}>
-                <h2 className="font-display font-semibold text-lg px-4 sm:px-5 pt-4 pb-2">{t("act.taskMove")}</h2>
+                <div className="px-4 sm:px-5 pt-4 pb-2">
+                  <h2 className="font-display font-semibold text-lg">{t("act.taskMove")}</h2>
+                  <p className="text-xs text-mut mt-1">{t("act.taskMoveDesc")}</p>
+                </div>
+                
+                {/* Period selector for task movement */}
+                <div className="px-4 sm:px-5 pb-3 border-b border-line">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Segmented<Period>
+                      value={taskMovePeriod}
+                      onChange={setTaskMovePeriod}
+                      options={[
+                        { value: "week", label: t("cal.week") },
+                        { value: "month", label: t("cal.month") },
+                      ]}
+                    />
+                    <div className="inline-flex items-center gap-1 ml-auto">
+                      <button className={btnIcon} onClick={() => navigateTaskMove(-1)} aria-label="←">
+                        <IconChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setTaskMoveCursor(today)}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-150 ${
+                          taskMoveCursor === today
+                            ? "border-mint/40 text-mint bg-mint/10"
+                            : "border-line2 text-mut hover:text-ink hover:bg-panel2"
+                        }`}
+                      >
+                        {t("cal.today")}
+                      </button>
+                      <button className={btnIcon} onClick={() => navigateTaskMove(1)} aria-label="→">
+                        <IconChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium text-mut">{taskMovePeriodLabel}</p>
+                </div>
+                
                 <div className="px-2.5 sm:px-3.5 pb-4 space-y-4">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-mint px-2 mb-1">
-                      {t("act.doneIn")} · {agg.completed.length}
+                      {t("act.doneIn")} · {taskMoveCompleted.length}
                     </p>
-                    {agg.completed.length === 0 && (
+                    {taskMoveCompleted.length === 0 && (
                       <p className="text-xs text-dim px-2 py-1.5">{t("act.noneDone")}</p>
                     )}
-                    {agg.completed.map((x) => {
+                    {taskMoveCompleted.map((x) => {
                       const team = state.teams.find((tm) => tm.id === x.teamId);
                       return (
                         <div key={x.id} className="flex items-start gap-2 px-2 py-1.5">
@@ -679,12 +749,12 @@ export function Activity({ onOpenPerson }: { onOpenPerson: (id: string) => void 
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-sky px-2 mb-1">
-                      {t("act.assignedIn")} · {agg.assigned.length}
+                      {t("act.assignedIn")} · {taskMoveAssigned.length}
                     </p>
-                    {agg.assigned.length === 0 && (
+                    {taskMoveAssigned.length === 0 && (
                       <p className="text-xs text-dim px-2 py-1.5">{t("act.noneAssigned")}</p>
                     )}
-                    {agg.assigned.map((x) => {
+                    {taskMoveAssigned.map((x) => {
                       const team = state.teams.find((tm) => tm.id === x.teamId);
                       return (
                         <div key={x.id} className="flex items-start gap-2 px-2 py-1.5">
