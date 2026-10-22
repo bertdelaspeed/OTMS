@@ -8,6 +8,7 @@ import { IconBriefcase, IconChevronRight, IconDownload, IconPencil, IconSearch, 
 import { ImportExcelModal, PersonModal } from "../modals";
 import { exportPeopleExcel } from "../exports";
 import { useI18n } from "../i18n";
+import { useUndo } from "../undo";
 
 type Filter = StatusKey | "all";
 
@@ -23,6 +24,7 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
   const { state, dispatch } = useStore();
   const { t, tp } = useI18n();
   const { push } = useToast();
+  const { pushUndo } = useUndo();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [modal, setModal] = useState<{ person: Person | null } | null>(null);
@@ -54,8 +56,16 @@ export function People({ onOpenPerson }: { onOpenPerson: (id: string) => void })
     .sort((a, b) => a.p.name.localeCompare(b.p.name));
 
   const remove = (p: Person) => {
+    // Capture team memberships before deletion
+    const teamIds = teamsOf(state, p.id).map((t) => t.id);
+    
     dispatch({ type: "REMOVE_PERSON", id: p.id });
     push(t("people.removed", { name: p.name }), "warn");
+    
+    // Push undo action
+    pushUndo(t("undo.personDeleted", { name: p.name }), () => {
+      dispatch({ type: "ADD_PERSON", person: p, teamIds });
+    });
   };
 
   const setTaskStatus = (taskId: string, status: "todo" | "active" | "done") => {

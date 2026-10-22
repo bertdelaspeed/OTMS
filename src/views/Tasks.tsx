@@ -19,6 +19,7 @@ import {
 import { IconArchive, IconListChecks, IconPlus, IconRefresh, IconSearch } from "../icons";
 import { TaskModal } from "../modals";
 import { useI18n } from "../i18n";
+import { useUndo } from "../undo";
 
 type Tab = "all" | "todo" | "active" | "done" | "late" | "archived";
 
@@ -35,6 +36,7 @@ export function Tasks() {
   const { state, dispatch } = useStore();
   const { t, tp } = useI18n();
   const { push } = useToast();
+  const { pushUndo } = useUndo();
   const today = todayISO();
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
@@ -119,6 +121,11 @@ export function Tasks() {
   const remove = (task: Task) => {
     dispatch({ type: "REMOVE_TASK", id: task.id });
     push(t("tasks.deleted", { t: task.title }), "warn");
+    
+    // Push undo action
+    pushUndo(t("undo.taskDeleted", { t: task.title }), () => {
+      dispatch({ type: "ADD_TASK", task });
+    });
   };
 
   const archive = (task: Task) => {

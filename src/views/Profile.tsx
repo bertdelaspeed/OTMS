@@ -29,6 +29,7 @@ import {
 } from "../icons";
 import { EventModal, PersonModal } from "../modals";
 import { useI18n } from "../i18n";
+import { useUndo } from "../undo";
 
 const DUE_TONE_CLS: Record<string, string> = {
   late: "text-coral bg-coral/10 border-coral/30",
@@ -62,6 +63,7 @@ export function Profile({
   const { state, dispatch } = useStore();
   const { t, tp, lang } = useI18n();
   const { push } = useToast();
+  const { pushUndo } = useUndo();
   const [filter, setFilter] = useState<KindFilter>("all");
   const [eventOpen, setEventOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -96,13 +98,32 @@ export function Profile({
   const visible = events.filter((e) => filter === "all" || e.kind === filter);
 
   const removeEvent = (id: string, title: string) => {
+    // Capture the event before deletion
+    const event = state.events.find((e) => e.id === id);
+    if (!event) return;
+    
     dispatch({ type: "REMOVE_EVENT", id });
     push(t("profile.removedEntry", { title }), "warn");
+    
+    // Push undo action
+    pushUndo(t("undo.eventDeleted", { title }), () => {
+      dispatch({ type: "ADD_EVENT", event });
+    });
   };
 
   const removePerson = () => {
+    // Capture team memberships before deletion
+    const teamIds = teamsOf(state, person.id).map((t) => t.id);
+    
     dispatch({ type: "REMOVE_PERSON", id: person.id });
     push(t("people.removed", { name: person.name }), "warn");
+    
+    // Push undo action
+    pushUndo(t("undo.personDeleted", { name: person.name }), () => {
+      dispatch({ type: "ADD_PERSON", person, teamIds });
+      // Don't call onDeleted() on undo - keep the user on the profile
+    });
+    
     onDeleted();
   };
 

@@ -9,6 +9,7 @@ import { fmtDateFull, getLocale, relTime, todayISO } from "./dates";
 import { gcalConnected, loadGcalCfg, saveGcalCfg, syncGcal } from "./gcal";
 import type { DbConfig } from "./remotes";
 import { loadDbConfig, loadLastSync, pushState, saveLastSync } from "./remotes";
+import { UndoProvider } from "./undo";
 import { Dashboard } from "./views/Dashboard";
 import { People } from "./views/People";
 import { Profile } from "./views/Profile";
@@ -52,7 +53,9 @@ export default function App() {
     <I18nProvider>
       <StoreProvider>
         <ToastProvider>
-          <Shell />
+          <UndoProvider>
+            <Shell />
+          </UndoProvider>
         </ToastProvider>
       </StoreProvider>
     </I18nProvider>
