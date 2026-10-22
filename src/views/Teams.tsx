@@ -7,11 +7,13 @@ import { Avatar, Chip, DangerAction, EmptyState, btnIcon, btnPrimary, panelCls, 
 import { IconCalendar, IconFlag, IconPencil, IconPlus, IconUsers } from "../icons";
 import { MembersModal, TeamModal } from "../modals";
 import { useI18n } from "../i18n";
+import { useUndo } from "../undo";
 
 export function Teams() {
   const { state, dispatch } = useStore();
   const { t, tp } = useI18n();
   const { push } = useToast();
+  const { pushUndo } = useUndo();
   const [modal, setModal] = useState<{ team: Team | null } | null>(null);
   const [membersFor, setMembersFor] = useState<Team | null>(null);
 
@@ -31,6 +33,11 @@ export function Teams() {
   const remove = (tm: Team) => {
     dispatch({ type: "REMOVE_TEAM", id: tm.id });
     push(t("teams.disbanded", { name: tm.name }), "warn");
+    
+    // Push undo action
+    pushUndo(t("undo.teamDeleted", { name: tm.name }), () => {
+      dispatch({ type: "ADD_TEAM", team: tm });
+    });
   };
 
   return (

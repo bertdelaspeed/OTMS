@@ -37,6 +37,12 @@ const en: Record<string, string> = {
   "common.optional": "optional",
   "common.confirmDelete": "Confirm?",
 
+  /* undo */
+  "undo.personDeleted": "{name} was removed",
+  "undo.teamDeleted": "Team \"{name}\" was disbanded",
+  "undo.taskDeleted": "Task \"{t}\" was deleted",
+  "undo.eventDeleted": "Event \"{title}\" was removed",
+
   /* statuses */
   "status.available": "Available",
   "status.onTask": "On task",
@@ -588,6 +594,12 @@ const fr: Record<string, string> = {
   "common.close": "Fermer",
   "common.optional": "facultatif",
   "common.confirmDelete": "Confirmer ?",
+
+  /* undo */
+  "undo.personDeleted": "{name} a été supprimé(e)",
+  "undo.teamDeleted": "L'équipe « {name} » a été dissoute",
+  "undo.taskDeleted": "La tâche « {t} » a été supprimée",
+  "undo.eventDeleted": "L'événement « {title} » a été supprimé",
 
   /* statuses */
   "status.available": "Disponible",
